@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Farmacia de la Iglesia - Sistema de Gestión</title>
+    <title>Farmacia de la Iglesia - Prueba de Diagnóstico</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -21,7 +21,6 @@
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
-        // Iconos SVG (simplificados)
         const Camera = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
         const X = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
         const Key = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
@@ -127,7 +126,6 @@
                 setApiError('');
                 setOcrResult(null);
 
-                // Lista de modelos para probar (en orden de preferencia)
                 const modelsToTry = [
                     'gemini-1.5-flash',
                     'gemini-2.0-flash-exp',
@@ -136,9 +134,9 @@
 
                 for (const model of modelsToTry) {
                     try {
-                        console.log(\`Intentando con modelo: \${model}\`);
+                        console.log('Intentando con modelo: ' + model);
 
-                        const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${geminiApiKey}\`;
+                        const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + geminiApiKey;
 
                         const response = await fetch(apiUrl, {
                             method: "POST",
@@ -157,7 +155,7 @@
 
                         if (response.ok && data.candidates && data.candidates[0]) {
                             const text = data.candidates[0].content.parts[0].text.trim();
-                            const cleanText = text.replace(/\`\`\`json|\`\`\`/g, '').trim();
+                            const cleanText = text.replace(/```json|```/g, '').trim();
                             const result = JSON.parse(cleanText);
 
                             setOcrResult({
@@ -167,20 +165,18 @@
                             });
 
                             setIsProcessing(false);
-                            alert(\`✅ Imagen analizada correctamente con \${model}\`);
-                            return; // Éxito, salir del loop
+                            alert('✅ Imagen analizada correctamente con ' + model);
+                            return;
                         } else {
-                            // Error con este modelo, intentar el siguiente
-                            console.warn(\`Modelo \${model} falló:\`, data.error);
+                            console.warn('Modelo ' + model + ' falló:', data.error);
                             continue;
                         }
                     } catch (error) {
-                        console.error(\`Error con modelo \${model}:\`, error);
+                        console.error('Error con modelo ' + model + ':', error);
                         continue;
                     }
                 }
 
-                // Si llegamos aquí, ningún modelo funcionó
                 setApiError('❌ No se pudo analizar la imagen con ningún modelo disponible. Verifica tu API Key o crea una nueva.');
                 setIsProcessing(false);
                 alert('⚠️ Error: No se pudo analizar la imagen. Por favor:\n\n1. Verifica que tu API Key sea correcta\n2. Crea una nueva API Key en: https://aistudio.google.com/app/apikey\n3. Asegúrate de seleccionar "Create API key in new project"');
