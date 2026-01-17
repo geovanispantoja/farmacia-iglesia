@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Farmacia de la Iglesia - Sistema de Gestión</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,35 +13,51 @@
         import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         window.firebaseModules = { initializeApp, getFirestore, collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, limit };
     </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        // Iconos simplificados para el ejemplo
-        const Camera = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>;
-        const Search = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>;
-        const Trash = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>;
-        const X = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>;
-        const Loader = () => <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>;
+        // --- ICONOS ---
+        const Icons = {
+            Plus: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
+            Minus: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"/></svg>,
+            Search: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
+            History: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+            Camera: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+            X: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+            ChevronRight: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>,
+            Loader: () => <svg className="w-6 h-6 animate-spin text-indigo-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        };
 
         const FarmaciaApp = () => {
-            const [activeScreen, setActiveScreen] = useState('home');
+            const [view, setView] = useState('home');
             const [medicamentos, setMedicamentos] = useState([]);
             const [entregas, setEntregas] = useState([]);
-            const [isLoading, setIsLoading] = useState(true);
-            const [geminiApiKey, setGeminiApiKey] = useState(localStorage.getItem('gemini_api_key_v2') || '');
-            const [showApiKeyModal, setShowApiKeyModal] = useState(!localStorage.getItem('gemini_api_key_v2'));
-            
-            // Estado para múltiples imágenes
+            const [loading, setLoading] = useState(true);
+            const [isProcessingIA, setIsProcessingIA] = useState(false);
             const [capturedImages, setCapturedImages] = useState([]);
-            const [isProcessing, setIsProcessing] = useState(false);
             
-            const [newMed, setNewMed] = useState({ nombre: '', presentacion: '', cantidad: '', vencimiento: '', categoria: '' });
-            const [foundMedicamentos, setFoundMedicamentos] = useState([]);
-            const [destinoEntrega, setDestinoEntrega] = useState('');
+            // Configuración
+            const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key_v3') || '');
+            const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key_v3'));
+
+            // Formulario Registro
+            const [formData, setFormData] = useState({ nombre: '', presentacion: '', categoria: '', vencimiento: '', cantidad: '' });
+            
+            // Buscador y Bajas
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedMed, setSelectedMed] = useState(null);
+            const [unidadesARetirar, setUnidadesARetirar] = useState(1);
+            const [destinoRetiro, setDestinoRetiro] = useState('');
 
             const firebaseConfig = {
                 apiKey: "AIzaSyDVI2gA-Q_leXM74lbCErJneV3h-Xs_V5k",
@@ -52,204 +68,431 @@
                 appId: "1:892807551500:web:935b4cc0bcf1dc97d1ec29"
             };
 
-            // 1. SOLUCIÓN BOTÓN ATRÁS (History Management)
+            // 1. MEJORA: GESTIÓN DE BOTÓN ATRÁS (History API)
             useEffect(() => {
-                const handlePopState = (event) => {
-                    if (event.state && event.state.screen) {
-                        setActiveScreen(event.state.screen);
+                const handlePopState = (e) => {
+                    if (e.state && e.state.view) {
+                        setView(e.state.view);
                     } else {
-                        setActiveScreen('home');
+                        setView('home');
                     }
                 };
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
             }, []);
 
-            const navigateTo = (screen) => {
-                window.history.pushState({ screen }, '', `#${screen}`);
-                setActiveScreen(screen);
+            const navigateTo = (newView) => {
+                window.history.pushState({ view: newView }, '', `#${newView}`);
+                setView(newView);
+                setCapturedImages([]); // Reset de imágenes al cambiar de vista
             };
 
-            // Inicialización
+            // Inicializar Firebase
             useEffect(() => {
                 const init = async () => {
                     try {
-                        const { initializeApp, getFirestore, collection, getDocs } = window.firebaseModules;
+                        const { initializeApp, getFirestore } = window.firebaseModules;
                         const app = initializeApp(firebaseConfig);
-                        const db = getFirestore(app);
-                        window.firebaseDb = db;
-                        await loadData();
-                    } catch (e) { console.error(e); }
-                    setIsLoading(false);
+                        window.db = getFirestore(app);
+                        await fetchData();
+                    } catch (e) { console.error("Error Firebase:", e); }
+                    setLoading(false);
                 };
-                setTimeout(init, 1000);
+                init();
             }, []);
 
-            const loadData = async () => {
-                const { collection, getDocs } = window.firebaseModules;
-                const snap = await getDocs(collection(window.firebaseDb, 'medicamentos'));
-                setMedicamentos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            const fetchData = async () => {
+                const { collection, getDocs, query, orderBy } = window.firebaseModules;
+                const medSnap = await getDocs(collection(window.db, 'medicamentos'));
+                const entSnap = await getDocs(query(collection(window.db, 'entregas'), orderBy('fecha', 'desc')));
+                setMedicamentos(medSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                setEntregas(entSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             };
 
-            // 2 & 3. IA MULTI-IMAGEN Y MODELO MEJORADO
-            const processMultipleImages = async (imageType = 'register') => {
+            // 2 & 3. MEJORA: IA MULTI-IMAGEN Y MODELO 1.5 FLASH
+            const handleCapture = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        setCapturedImages(prev => [...prev, ev.target.result]);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const processWithIA = async (type) => {
                 if (capturedImages.length === 0) return;
-                setIsProcessing(true);
-                
+                setIsProcessingIA(true);
+
                 try {
-                    // Usamos gemini-1.5-flash que es excelente para OCR
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                    // Cambio a Gemini 1.5 Flash: Mejor OCR y razonamiento visual
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                     
-                    const imageParts = await Promise.all(capturedImages.map(async (img) => {
-                        const base64 = img.split(',')[1];
-                        return { inline_data: { mime_type: "image/jpeg", data: base64 } };
+                    const imageParts = capturedImages.map(img => ({
+                        inline_data: { mime_type: "image/jpeg", data: img.split(',')[1] }
                     }));
 
-                    const prompt = imageType === 'register' 
-                        ? "Analiza estas fotos de un mismo medicamento. Cruza la información de todas para extraer: nombre, presentación (dosis/tipo), categoría y fecha de vencimiento (YYYY-MM-DD). Responde SOLO JSON: {\"nombre\":\"\",\"presentacion\":\"\",\"categoria\":\"\",\"vencimiento\":\"\"}"
-                        : "Analiza estas fotos y dime el nombre y presentación detectados. Responde SOLO JSON: {\"nombre\":\"\",\"presentacion\":\"\"}";
+                    const prompt = type === 'register' 
+                        ? "Analiza estas fotos de un medicamento (pueden ser diferentes ángulos). Extrae: nombre comercial, presentación (ej: 500mg, 30 comprimidos), categoría médica y fecha de vencimiento (ISO YYYY-MM-DD). Responde estrictamente JSON: {\"nombre\":\"\",\"presentacion\":\"\",\"categoria\":\"\",\"vencimiento\":\"\"}"
+                        : "Identifica el medicamento en estas fotos. Responde estrictamente JSON: {\"nombre\":\"\"}";
 
-                    const response = await fetch(apiUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }, ...imageParts] }]
-                        })
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, ...imageParts] }] })
                     });
 
-                    const data = await response.json();
-                    const result = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, ''));
+                    const data = await res.json();
+                    const cleanJson = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    const result = JSON.parse(cleanJson);
 
-                    if(imageType === 'register') {
-                        setNewMed(prev => ({ ...prev, ...result }));
+                    if (type === 'register') {
+                        setFormData(prev => ({ ...prev, ...result }));
                     } else {
-                        const matches = medicamentos.filter(m => 
-                            m.nombre.toLowerCase().includes(result.nombre.toLowerCase())
-                        );
-                        setFoundMedicamentos(matches);
+                        setSearchTerm(result.nombre);
                     }
-                } catch (error) {
-                    alert("Error analizando imágenes. Verifica tu API Key.");
+                } catch (err) {
+                    alert("Error con la IA. Verifica tu API Key o la calidad de las fotos.");
+                    console.error(err);
+                } finally {
+                    setIsProcessingIA(false);
                 }
-                setIsProcessing(false);
             };
 
-            const handleFileChange = async (e) => {
-                const files = Array.from(e.target.files);
-                const newImages = await Promise.all(files.map(file => {
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.readAsDataURL(file);
-                    });
-                }));
-                setCapturedImages(prev => [...prev, ...newImages]);
+            // Acciones de Base de Datos
+            const handleRegister = async () => {
+                if (!formData.nombre || !formData.cantidad) return alert("Nombre y cantidad obligatorios");
+                const { collection, addDoc } = window.firebaseModules;
+                await addDoc(collection(window.db, 'medicamentos'), { ...formData, cantidad: parseInt(formData.cantidad), fechaCarga: new Date().toISOString() });
+                alert("Registrado con éxito");
+                await fetchData();
+                window.history.back();
             };
 
-            // Renders
-            if (showApiKeyModal) {
+            const handleBaja = async () => {
+                if (!selectedMed || !unidadesARetirar || !destinoRetiro) return alert("Faltan datos");
+                if (unidadesARetirar > selectedMed.cantidad) return alert("No hay stock suficiente");
+
+                const { collection, addDoc, updateDoc, doc } = window.firebaseModules;
+                const nuevaCant = selectedMed.cantidad - unidadesARetirar;
+                
+                await updateDoc(doc(window.db, 'medicamentos', selectedMed.id), { cantidad: nuevaCant });
+                await addDoc(collection(window.db, 'entregas'), {
+                    medicamentoId: selectedMed.id,
+                    nombre: selectedMed.nombre,
+                    presentacion: selectedMed.presentacion,
+                    cantidad: parseInt(unidadesARetirar),
+                    destino: destinoRetiro,
+                    fecha: new Date().toISOString()
+                });
+
+                alert("Retiro procesado");
+                await fetchData();
+                window.history.back();
+            };
+
+            // --- FILTRADO ---
+            const filteredMeds = medicamentos.filter(m => 
+                m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                m.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            // --- VISTAS ---
+            const renderHome = () => (
+                <div className="p-4 grid grid-cols-1 gap-4 mt-4">
+                    <button onClick={() => navigateTo('register')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between group active:scale-95 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center"><Icons.Plus /></div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Registrar Ingreso</h3>
+                                <p className="text-xs text-slate-500">Añadir nuevo stock al sistema</p>
+                            </div>
+                        </div>
+                        <Icons.ChevronRight />
+                    </button>
+
+                    <button onClick={() => navigateTo('subtract')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><Icons.Minus /></div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Dar de Baja</h3>
+                                <p className="text-xs text-slate-500">Retirar medicina para entrega</p>
+                            </div>
+                        </div>
+                        <Icons.ChevronRight />
+                    </button>
+
+                    <button onClick={() => navigateTo('inventory')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><Icons.Search /></div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Inventario</h3>
+                                <p className="text-xs text-slate-500">Consultar stock disponible</p>
+                            </div>
+                        </div>
+                        <Icons.ChevronRight />
+                    </button>
+
+                    <button onClick={() => navigateTo('history')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center"><Icons.History /></div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Historial</h3>
+                                <p className="text-xs text-slate-500">Ver últimas entregas</p>
+                            </div>
+                        </div>
+                        <Icons.ChevronRight />
+                    </button>
+                </div>
+            );
+
+            const renderRegister = () => (
+                <div className="p-4 space-y-4 animate-in slide-in-from-right duration-300">
+                    <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-xl font-bold text-slate-800">Nuevo Registro</h2>
+                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                    </div>
+
+                    {/* Área de Captura Multimagen */}
+                    <div className="bg-indigo-50 p-4 rounded-2xl border-2 border-dashed border-indigo-200">
+                        <div className="flex gap-2 overflow-x-auto mb-3">
+                            {capturedImages.map((img, i) => (
+                                <div key={i} className="relative shrink-0">
+                                    <img src={img} className="w-20 h-20 object-cover rounded-lg border shadow-sm" />
+                                    <button onClick={() => setCapturedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><Icons.X /></button>
+                                </div>
+                            ))}
+                            <label className="w-20 h-20 flex flex-col items-center justify-center bg-white rounded-lg border shadow-sm cursor-pointer active:bg-slate-50">
+                                <Icons.Camera />
+                                <span className="text-[10px] mt-1 font-bold">AÑADIR</span>
+                                {/* capture="environment" para móviles, accept para desktop */}
+                                <input type="file" accept="image/*" capture="environment" multiple onChange={handleCapture} className="hidden" />
+                            </label>
+                        </div>
+                        {capturedImages.length > 0 && (
+                            <button 
+                                onClick={() => processWithIA('register')}
+                                disabled={isProcessingIA}
+                                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+                            >
+                                {isProcessingIA ? <Icons.Loader /> : 'AUTORELLENAR CON IA'}
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="block text-xs font-bold text-slate-500 ml-1">NOMBRE DEL MEDICAMENTO</label>
+                        <input type="text" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej: Paracetamol" />
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 ml-1">PRESENTACIÓN</label>
+                                <input type="text" value={formData.presentacion} onChange={e => setFormData({...formData, presentacion: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="500mg" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 ml-1">CANTIDAD</label>
+                                <input type="number" value={formData.cantidad} onChange={e => setFormData({...formData, cantidad: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="0" />
+                            </div>
+                        </div>
+
+                        <label className="block text-xs font-bold text-slate-500 ml-1">CATEGORÍA</label>
+                        <input type="text" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="Analgésico" />
+
+                        <label className="block text-xs font-bold text-slate-500 ml-1">FECHA DE VENCIMIENTO</label>
+                        <input type="date" value={formData.vencimiento} onChange={e => setFormData({...formData, vencimiento: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" />
+
+                        <button onClick={handleRegister} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold mt-4 shadow-xl active:scale-95 transition-transform">GUARDAR EN SISTEMA</button>
+                    </div>
+                </div>
+            );
+
+            const renderSubtract = () => (
+                <div className="p-4 space-y-4 animate-in slide-in-from-right duration-300">
+                    <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-xl font-bold text-slate-800">Dar de Baja / Retirar</h2>
+                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                    </div>
+
+                    {!selectedMed ? (
+                        <>
+                            <div className="bg-orange-50 p-4 rounded-2xl border-2 border-dashed border-orange-200 mb-4">
+                                <p className="text-xs font-bold text-orange-700 mb-2">¿TIENES EL MEDICAMENTO? ESCANEA:</p>
+                                <div className="flex gap-2 overflow-x-auto mb-3">
+                                    {capturedImages.map((img, i) => (
+                                        <img key={i} src={img} className="w-16 h-16 object-cover rounded-lg" />
+                                    ))}
+                                    <label className="w-16 h-16 flex items-center justify-center bg-white rounded-lg border shadow-sm cursor-pointer">
+                                        <Icons.Camera />
+                                        <input type="file" accept="image/*" capture="environment" multiple onChange={handleCapture} className="hidden" />
+                                    </label>
+                                </div>
+                                {capturedImages.length > 0 && (
+                                    <button onClick={() => processWithIA('search')} disabled={isProcessingIA} className="w-full bg-orange-600 text-white py-2 rounded-lg font-bold flex justify-center">
+                                        {isProcessingIA ? <Icons.Loader /> : 'BUSCAR POR IMAGEN'}
+                                    </button>
+                                )}
+                            </div>
+                            <input type="text" placeholder="🔍 Buscar nombre o categoría..." className="w-full p-4 rounded-xl border shadow-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                                {filteredMeds.map(m => (
+                                    <div key={m.id} onClick={() => setSelectedMed(m)} className="p-4 bg-white rounded-xl border border-slate-100 flex justify-between items-center active:bg-slate-50">
+                                        <div>
+                                            <div className="font-bold text-slate-800">{m.nombre}</div>
+                                            <div className="text-xs text-slate-500">{m.presentacion} - {m.categoria}</div>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${m.cantidad < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>Stock: {m.cantidad}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                            <div className="text-center">
+                                <h3 className="text-lg font-bold">{selectedMed.nombre}</h3>
+                                <p className="text-sm text-slate-500">{selectedMed.presentacion}</p>
+                            </div>
+                            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400">RETIRAR</label>
+                                    <input type="number" value={unidadesARetirar} onChange={e => setUnidadesARetirar(e.target.value)} className="bg-transparent text-2xl font-bold w-20 outline-none" />
+                                </div>
+                                <div className="text-right">
+                                    <label className="block text-[10px] font-bold text-slate-400">DISPONIBLE</label>
+                                    <div className="text-2xl font-bold text-slate-400">{selectedMed.cantidad}</div>
+                                </div>
+                            </div>
+                            <label className="block text-xs font-bold text-slate-500 ml-1 uppercase">Destino / Persona que recibe</label>
+                            <input type="text" value={destinoRetiro} onChange={e => setDestinoRetiro(e.target.value)} className="w-full p-4 rounded-xl border outline-none" placeholder="Nombre o Institución" />
+                            <button onClick={handleBaja} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-lg">CONFIRMAR RETIRO</button>
+                            <button onClick={() => setSelectedMed(null)} className="w-full text-slate-400 font-bold py-2">CANCELAR</button>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const renderInventory = () => (
+                <div className="p-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Inventario Real</h2>
+                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                    </div>
+                    <input type="text" placeholder="🔍 Buscar..." className="w-full p-4 rounded-xl border outline-none shadow-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <div className="grid grid-cols-1 gap-2">
+                        {filteredMeds.map(m => (
+                            <div key={m.id} className="p-4 bg-white rounded-xl border flex justify-between items-start">
+                                <div>
+                                    <div className="font-bold text-slate-800">{m.nombre}</div>
+                                    <div className="text-xs text-slate-500 uppercase">{m.categoria}</div>
+                                    <div className="text-[10px] text-red-500 mt-1 font-bold">Vence: {m.vencimiento}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-bold text-indigo-600">{m.cantidad}</div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase">unid.</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            const renderHistory = () => (
+                <div className="p-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Historial de Entregas</h2>
+                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                    </div>
+                    <div className="space-y-3">
+                        {entregas.map(e => (
+                            <div key={e.id} className="p-4 bg-white rounded-xl border border-purple-100 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-purple-400"></div>
+                                <div className="flex justify-between">
+                                    <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">{new Date(e.fecha).toLocaleDateString()}</span>
+                                    <span className="text-[10px] font-bold text-slate-400">{new Date(e.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <div className="mt-1">
+                                    <div className="font-bold text-slate-800 leading-tight">{e.nombre}</div>
+                                    <div className="text-xs text-slate-500">{e.presentacion}</div>
+                                </div>
+                                <div className="mt-3 flex justify-between items-end">
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Destino</div>
+                                        <div className="text-sm font-bold text-slate-700">{e.destino}</div>
+                                    </div>
+                                    <div className="bg-purple-50 px-3 py-1 rounded-lg">
+                                        <span className="text-purple-700 font-bold">-{e.cantidad}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            // Settings Modal
+            if (showSettings) {
                 return (
-                    <div className="p-8 text-center space-y-4">
-                        <h2 className="text-xl font-bold">Configurar Gemini API Key</h2>
-                        <input 
-                            type="password" 
-                            className="w-full p-2 border rounded" 
-                            onChange={(e) => setGeminiApiKey(e.target.value)}
-                            placeholder="Pega tu clave AIza..."
-                        />
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={() => {
-                            localStorage.setItem('gemini_api_key_v2', geminiApiKey);
-                            setShowApiKeyModal(false);
-                        }}>Guardar</button>
+                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-6 text-center">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+                            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Icons.Camera />
+                            </div>
+                            <h2 className="text-xl font-bold mb-2">Clave de IA Requerida</h2>
+                            <p className="text-sm text-slate-500 mb-6">Pega tu Google Gemini API Key para habilitar el OCR multimagen.</p>
+                            <input 
+                                type="password" 
+                                className="w-full p-4 bg-slate-100 rounded-xl mb-4 border-none outline-none focus:ring-2 focus:ring-indigo-500"
+                                placeholder="AIzaSy..."
+                                value={apiKey}
+                                onChange={e => setApiKey(e.target.value)}
+                            />
+                            <button 
+                                onClick={() => {
+                                    localStorage.setItem('gemini_api_key_v3', apiKey);
+                                    setShowSettings(false);
+                                }}
+                                className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200"
+                            >
+                                ACTIVAR SISTEMA
+                            </button>
+                        </div>
                     </div>
                 );
             }
 
-            if (isLoading) return <div className="flex h-screen items-center justify-center"><Loader /></div>;
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center space-y-4">
+                    <Icons.Loader />
+                    <p className="text-xs font-bold text-slate-400 animate-pulse uppercase tracking-widest">Sincronizando Base de Datos...</p>
+                </div>
+            );
 
             return (
-                <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-10">
-                    {/* Header */}
-                    <div className="bg-indigo-700 text-white p-6 shadow-lg">
-                        <h1 className="text-xl font-bold">Farmacia de la Iglesia</h1>
-                        <p className="text-xs opacity-70">Sistema IA v2.0</p>
+                <div className="max-w-md mx-auto min-h-screen relative shadow-2xl bg-white overflow-hidden pb-10">
+                    {/* Header Principal */}
+                    <div className="bg-slate-900 text-white p-6 pt-10 rounded-b-[40px] shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-10 -mt-10"></div>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-1">
+                                <h1 className="text-2xl font-bold tracking-tight">Farmacia <span className="text-indigo-400">Iglesia</span></h1>
+                                <button onClick={() => setShowSettings(true)} className="p-2 bg-white/10 rounded-lg"><Icons.Camera /></button>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest opacity-80">Gestión de Stock e Inteligencia Artificial</p>
+                        </div>
                     </div>
 
-                    {activeScreen === 'home' && (
-                        <div className="p-4 grid grid-cols-2 gap-4">
-                            <button onClick={() => navigateTo('register')} className="bg-white p-6 rounded-xl shadow text-center">
-                                <div className="text-green-600 flex justify-center mb-2"><Camera /></div>
-                                <span className="font-bold">Registrar</span>
-                            </button>
-                            <button onClick={() => navigateTo('subtract')} className="bg-white p-6 rounded-xl shadow text-center">
-                                <div className="text-orange-600 flex justify-center mb-2"><Trash /></div>
-                                <span className="font-bold">Dar de Baja</span>
-                            </button>
-                            {/* ... otros botones ... */}
-                        </div>
-                    )}
+                    {/* Vistas Dinámicas */}
+                    <div className="relative z-20 -mt-6">
+                        {view === 'home' && renderHome()}
+                        {view === 'register' && renderRegister()}
+                        {view === 'subtract' && renderSubtract()}
+                        {view === 'inventory' && renderInventory()}
+                        {view === 'history' && renderHistory()}
+                    </div>
 
-                    {(activeScreen === 'register' || activeScreen === 'subtract') && (
-                        <div className="p-4 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h2 className="font-bold text-lg">{activeScreen === 'register' ? 'Nuevo Registro' : 'Retirar Stock'}</h2>
-                                <button onClick={() => window.history.back()}><X /></button>
-                            </div>
-
-                            {/* Captura Multimagen */}
-                            <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-300">
-                                <div className="flex gap-2 overflow-x-auto pb-2">
-                                    {capturedImages.map((img, i) => (
-                                        <img key={i} src={img} className="w-20 h-20 object-cover rounded" />
-                                    ))}
-                                    <label className="w-20 h-20 flex items-center justify-center bg-gray-100 rounded cursor-pointer shrink-0">
-                                        <Camera />
-                                        {/* 4. Solución Desktop: accept="image/*" y multiple */}
-                                        <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleFileChange} />
-                                    </label>
-                                </div>
-                                {capturedImages.length > 0 && (
-                                    <button 
-                                        onClick={() => processMultipleImages(activeScreen)}
-                                        className="w-full mt-4 bg-indigo-600 text-white py-2 rounded-lg font-bold flex justify-center items-center gap-2"
-                                        disabled={isProcessing}
-                                    >
-                                        {isProcessing ? <Loader /> : 'Analizar con IA'}
-                                    </button>
-                                )}
-                            </div>
-
-                            {activeScreen === 'register' ? (
-                                <div className="space-y-3">
-                                    <input type="text" placeholder="Nombre" value={newMed.nombre} className="w-full p-2 border rounded" onChange={e => setNewMed({...newMed, nombre: e.target.value})} />
-                                    <input type="text" placeholder="Presentación" value={newMed.presentacion} className="w-full p-2 border rounded" onChange={e => setNewMed({...newMed, presentacion: e.target.value})} />
-                                    <input type="date" value={newMed.vencimiento} className="w-full p-2 border rounded" onChange={e => setNewMed({...newMed, vencimiento: e.target.value})} />
-                                    <input type="number" placeholder="Cantidad" className="w-full p-2 border rounded" onChange={e => setNewMed({...newMed, cantidad: e.target.value})} />
-                                    <button className="w-full bg-green-600 text-white py-3 rounded-xl font-bold" onClick={async () => {
-                                        const { collection, addDoc } = window.firebaseModules;
-                                        await addDoc(collection(window.firebaseDb, 'medicamentos'), {...newMed, fechaRegistro: new Date().toISOString()});
-                                        alert("Guardado!");
-                                        window.history.back();
-                                    }}>Guardar Medicamento</button>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {foundMedicamentos.map(m => (
-                                        <div key={m.id} className="p-3 bg-white border rounded-xl flex justify-between items-center">
-                                            <div>
-                                                <div className="font-bold">{m.nombre}</div>
-                                                <div className="text-xs text-gray-500">Stock: {m.cantidad}</div>
-                                            </div>
-                                            <button className="bg-orange-500 text-white px-3 py-1 rounded" onClick={() => {
-                                                const cant = prompt("Cantidad a retirar:");
-                                                if(cant) alert("Retirado");
-                                            }}>Retirar</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {/* Footer / Safe Area */}
+                    <div className="text-center py-8 opacity-20 text-[10px] font-bold tracking-tighter uppercase">
+                        Sistema Farmacéutico de la Iglesia &copy; 2024
+                    </div>
                 </div>
             );
         };
