@@ -17,25 +17,28 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+        .animate-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // --- ICONOS ---
+        // --- ICONOS COMPLETOS ---
         const Icons = {
+            Camera: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+            Search: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
             Plus: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
             Minus: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"/></svg>,
-            Search: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
             History: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-            Camera: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
             X: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
-            ChevronRight: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>,
-            Loader: () => <svg className="w-6 h-6 animate-spin text-indigo-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Alert: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>,
+            ChevronDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>,
+            Trash: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+            Loader: () => <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
         };
 
         const FarmaciaApp = () => {
@@ -45,19 +48,23 @@
             const [loading, setLoading] = useState(true);
             const [isProcessingIA, setIsProcessingIA] = useState(false);
             const [capturedImages, setCapturedImages] = useState([]);
-            
-            // Configuración
             const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key_v3') || '');
-            const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key_v3'));
+            const [showApiKeyModal, setShowApiKeyModal] = useState(!localStorage.getItem('gemini_api_key_v3'));
 
-            // Formulario Registro
-            const [formData, setFormData] = useState({ nombre: '', presentacion: '', categoria: '', vencimiento: '', cantidad: '' });
-            
-            // Buscador y Bajas
+            // Estados de Inventario y UI
             const [searchTerm, setSearchTerm] = useState('');
+            const [showVencidos, setShowVencidos] = useState(false);
+            const [showPorVencer, setShowPorVencer] = useState(false);
+
+            // Formulario Registro y Duplicados
+            const [formData, setFormData] = useState({ nombre: '', presentacion: '', categoria: '', vencimiento: '', cantidad: '' });
+            const [duplicateFound, setDuplicateFound] = useState(null);
+            const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+            // Estados de Baja
             const [selectedMed, setSelectedMed] = useState(null);
-            const [unidadesARetirar, setUnidadesARetirar] = useState(1);
-            const [destinoRetiro, setDestinoRetiro] = useState('');
+            const [destinoEntrega, setDestinoEntrega] = useState('');
+            const [unidadesABajar, setUnidadesABajar] = useState(1);
 
             const firebaseConfig = {
                 apiKey: "AIzaSyDVI2gA-Q_leXM74lbCErJneV3h-Xs_V5k",
@@ -68,14 +75,11 @@
                 appId: "1:892807551500:web:935b4cc0bcf1dc97d1ec29"
             };
 
-            // 1. MEJORA: GESTIÓN DE BOTÓN ATRÁS (History API)
+            // --- MEJORA 1: GESTIÓN DE HISTORIAL (BOTÓN ATRÁS) ---
             useEffect(() => {
                 const handlePopState = (e) => {
-                    if (e.state && e.state.view) {
-                        setView(e.state.view);
-                    } else {
-                        setView('home');
-                    }
+                    if (e.state && e.state.view) setView(e.state.view);
+                    else setView('home');
                 };
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
@@ -84,10 +88,10 @@
             const navigateTo = (newView) => {
                 window.history.pushState({ view: newView }, '', `#${newView}`);
                 setView(newView);
-                setCapturedImages([]); // Reset de imágenes al cambiar de vista
+                setCapturedImages([]);
             };
 
-            // Inicializar Firebase
+            // --- INICIALIZACIÓN ---
             useEffect(() => {
                 const init = async () => {
                     try {
@@ -95,7 +99,7 @@
                         const app = initializeApp(firebaseConfig);
                         window.db = getFirestore(app);
                         await fetchData();
-                    } catch (e) { console.error("Error Firebase:", e); }
+                    } catch (e) { console.error(e); }
                     setLoading(false);
                 };
                 init();
@@ -109,390 +113,349 @@
                 setEntregas(entSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             };
 
-            // 2 & 3. MEJORA: IA MULTI-IMAGEN Y MODELO 1.5 FLASH
+            // --- LÓGICA DE VENCIMIENTO ---
+            const getDaysUntilExpiry = (fecha) => {
+                const diff = new Date(fecha) - new Date();
+                return Math.ceil(diff / (1000 * 60 * 60 * 24));
+            };
+
+            const medsVencidos = medicamentos.filter(m => getDaysUntilExpiry(m.vencimiento) < 0);
+            const medsPorVencer = medicamentos.filter(m => {
+                const d = getDaysUntilExpiry(m.vencimiento);
+                return d >= 0 && d <= 30;
+            });
+
+            // --- MEJORA 2 Y 3: IA MULTI-IMAGEN CON 1.5 FLASH ---
             const handleCapture = (e) => {
                 const files = Array.from(e.target.files);
                 files.forEach(file => {
                     const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        setCapturedImages(prev => [...prev, ev.target.result]);
-                    };
+                    reader.onload = (ev) => setCapturedImages(prev => [...prev, ev.target.result]);
                     reader.readAsDataURL(file);
                 });
             };
 
-            const processWithIA = async (type) => {
+            const processIA = async (mode) => {
                 if (capturedImages.length === 0) return;
                 setIsProcessingIA(true);
-
                 try {
-                    // Cambio a Gemini 1.5 Flash: Mejor OCR y razonamiento visual
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                    
                     const imageParts = capturedImages.map(img => ({
                         inline_data: { mime_type: "image/jpeg", data: img.split(',')[1] }
                     }));
 
-                    const prompt = type === 'register' 
-                        ? "Analiza estas fotos de un medicamento (pueden ser diferentes ángulos). Extrae: nombre comercial, presentación (ej: 500mg, 30 comprimidos), categoría médica y fecha de vencimiento (ISO YYYY-MM-DD). Responde estrictamente JSON: {\"nombre\":\"\",\"presentacion\":\"\",\"categoria\":\"\",\"vencimiento\":\"\"}"
-                        : "Identifica el medicamento en estas fotos. Responde estrictamente JSON: {\"nombre\":\"\"}";
+                    const prompt = mode === 'register' 
+                        ? "Analiza estas fotos. Extrae: nombre, presentación, categoría y vencimiento (YYYY-MM-DD). Responde SOLO JSON: {\"nombre\":\"\",\"presentacion\":\"\",\"categoria\":\"\",\"vencimiento\":\"\"}"
+                        : "Identifica el nombre del medicamento en estas fotos. Responde SOLO JSON: {\"nombre\":\"\"}";
 
                     const res = await fetch(url, {
                         method: 'POST',
                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, ...imageParts] }] })
                     });
-
                     const data = await res.json();
-                    const cleanJson = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                    const result = JSON.parse(cleanJson);
-
-                    if (type === 'register') {
-                        setFormData(prev => ({ ...prev, ...result }));
-                    } else {
-                        setSearchTerm(result.nombre);
-                    }
-                } catch (err) {
-                    alert("Error con la IA. Verifica tu API Key o la calidad de las fotos.");
-                    console.error(err);
-                } finally {
-                    setIsProcessingIA(false);
-                }
+                    const result = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, ''));
+                    
+                    if (mode === 'register') setFormData(prev => ({ ...prev, ...result }));
+                    else setSearchTerm(result.nombre);
+                } catch (e) { alert("Error con la IA. Revisa tu API Key."); }
+                setIsProcessingIA(false);
             };
 
-            // Acciones de Base de Datos
-            const handleRegister = async () => {
-                if (!formData.nombre || !formData.cantidad) return alert("Nombre y cantidad obligatorios");
+            // --- GESTIÓN DE DATOS (FIREBASE) ---
+            const handleSave = async () => {
+                const duplicate = medicamentos.find(m => m.nombre.toLowerCase() === formData.nombre.toLowerCase() && m.presentacion === formData.presentacion);
+                if (duplicate) {
+                    setDuplicateFound(duplicate);
+                    setShowDuplicateModal(true);
+                    return;
+                }
+                await commitSave();
+            };
+
+            const commitSave = async () => {
                 const { collection, addDoc } = window.firebaseModules;
                 await addDoc(collection(window.db, 'medicamentos'), { ...formData, cantidad: parseInt(formData.cantidad), fechaCarga: new Date().toISOString() });
-                alert("Registrado con éxito");
+                alert("Guardado");
+                await fetchData();
+                window.history.back();
+            };
+
+            const handleSumarStock = async () => {
+                const { doc, updateDoc } = window.firebaseModules;
+                const nuevaCant = duplicateFound.cantidad + parseInt(formData.cantidad);
+                await updateDoc(doc(window.db, 'medicamentos', duplicateFound.id), { cantidad: nuevaCant });
+                setShowDuplicateModal(false);
                 await fetchData();
                 window.history.back();
             };
 
             const handleBaja = async () => {
-                if (!selectedMed || !unidadesARetirar || !destinoRetiro) return alert("Faltan datos");
-                if (unidadesARetirar > selectedMed.cantidad) return alert("No hay stock suficiente");
-
                 const { collection, addDoc, updateDoc, doc } = window.firebaseModules;
-                const nuevaCant = selectedMed.cantidad - unidadesARetirar;
+                if (unidadesABajar > selectedMed.cantidad) return alert("Stock insuficiente");
                 
-                await updateDoc(doc(window.db, 'medicamentos', selectedMed.id), { cantidad: nuevaCant });
+                await updateDoc(doc(window.db, 'medicamentos', selectedMed.id), { cantidad: selectedMed.cantidad - unidadesABajar });
                 await addDoc(collection(window.db, 'entregas'), {
-                    medicamentoId: selectedMed.id,
                     nombre: selectedMed.nombre,
                     presentacion: selectedMed.presentacion,
-                    cantidad: parseInt(unidadesARetirar),
-                    destino: destinoRetiro,
+                    cantidad: parseInt(unidadesABajar),
+                    destino: destinoEntrega,
                     fecha: new Date().toISOString()
                 });
-
-                alert("Retiro procesado");
+                alert("Baja procesada");
                 await fetchData();
                 window.history.back();
             };
 
-            // --- FILTRADO ---
-            const filteredMeds = medicamentos.filter(m => 
-                m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                m.categoria.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            // --- RENDER VISTAS ---
 
-            // --- VISTAS ---
-            const renderHome = () => (
-                <div className="p-4 grid grid-cols-1 gap-4 mt-4">
-                    <button onClick={() => navigateTo('register')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between group active:scale-95 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center"><Icons.Plus /></div>
-                            <div className="text-left">
-                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Registrar Ingreso</h3>
-                                <p className="text-xs text-slate-500">Añadir nuevo stock al sistema</p>
+            if (loading) return <div className="h-screen flex items-center justify-center bg-indigo-900 text-white font-bold animate-pulse uppercase">Cargando Sistema...</div>;
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-10">
+                    {/* MODAL API KEY */}
+                    {showApiKeyModal && (
+                        <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-6">
+                            <div className="bg-white p-8 rounded-3xl w-full shadow-2xl text-center">
+                                <h2 className="text-2xl font-bold mb-4">Configuración IA</h2>
+                                <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-4 bg-slate-100 rounded-xl mb-4" placeholder="Gemini API Key..." />
+                                <button onClick={() => { localStorage.setItem('gemini_api_key_v3', apiKey); setShowApiKeyModal(false); }} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">ACTIVAR</button>
                             </div>
                         </div>
-                        <Icons.ChevronRight />
-                    </button>
+                    )}
 
-                    <button onClick={() => navigateTo('subtract')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><Icons.Minus /></div>
-                            <div className="text-left">
-                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Dar de Baja</h3>
-                                <p className="text-xs text-slate-500">Retirar medicina para entrega</p>
-                            </div>
-                        </div>
-                        <Icons.ChevronRight />
-                    </button>
-
-                    <button onClick={() => navigateTo('inventory')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><Icons.Search /></div>
-                            <div className="text-left">
-                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Inventario</h3>
-                                <p className="text-xs text-slate-500">Consultar stock disponible</p>
-                            </div>
-                        </div>
-                        <Icons.ChevronRight />
-                    </button>
-
-                    <button onClick={() => navigateTo('history')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-95 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center"><Icons.History /></div>
-                            <div className="text-left">
-                                <h3 className="font-bold text-slate-800 uppercase tracking-tight">Historial</h3>
-                                <p className="text-xs text-slate-500">Ver últimas entregas</p>
-                            </div>
-                        </div>
-                        <Icons.ChevronRight />
-                    </button>
-                </div>
-            );
-
-            const renderRegister = () => (
-                <div className="p-4 space-y-4 animate-in slide-in-from-right duration-300">
-                    <div className="flex justify-between items-center mb-2">
-                        <h2 className="text-xl font-bold text-slate-800">Nuevo Registro</h2>
-                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
-                    </div>
-
-                    {/* Área de Captura Multimagen */}
-                    <div className="bg-indigo-50 p-4 rounded-2xl border-2 border-dashed border-indigo-200">
-                        <div className="flex gap-2 overflow-x-auto mb-3">
-                            {capturedImages.map((img, i) => (
-                                <div key={i} className="relative shrink-0">
-                                    <img src={img} className="w-20 h-20 object-cover rounded-lg border shadow-sm" />
-                                    <button onClick={() => setCapturedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><Icons.X /></button>
+                    {/* MODAL DUPLICADOS */}
+                    {showDuplicateModal && (
+                        <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white p-6 rounded-3xl w-full max-w-sm animate-in">
+                                <div className="text-orange-500 mb-4 flex justify-center"><Icons.Alert /></div>
+                                <h3 className="text-xl font-bold text-center mb-2">¿Sumar a lote existente?</h3>
+                                <p className="text-sm text-slate-500 text-center mb-6">Ya existe <b>{duplicateFound.nombre}</b>. ¿Quieres sumar estas <b>{formData.cantidad}</b> unidades al stock actual?</p>
+                                <div className="space-y-3">
+                                    <button onClick={handleSumarStock} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">SÍ, SUMAR AL EXISTENTE</button>
+                                    <button onClick={commitSave} className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold">NO, CREAR LOTE NUEVO</button>
+                                    <button onClick={() => setShowDuplicateModal(false)} className="w-full text-slate-400 text-xs font-bold py-2">CANCELAR</button>
                                 </div>
-                            ))}
-                            <label className="w-20 h-20 flex flex-col items-center justify-center bg-white rounded-lg border shadow-sm cursor-pointer active:bg-slate-50">
-                                <Icons.Camera />
-                                <span className="text-[10px] mt-1 font-bold">AÑADIR</span>
-                                {/* capture="environment" para móviles, accept para desktop */}
-                                <input type="file" accept="image/*" capture="environment" multiple onChange={handleCapture} className="hidden" />
-                            </label>
-                        </div>
-                        {capturedImages.length > 0 && (
-                            <button 
-                                onClick={() => processWithIA('register')}
-                                disabled={isProcessingIA}
-                                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-                            >
-                                {isProcessingIA ? <Icons.Loader /> : 'AUTORELLENAR CON IA'}
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="block text-xs font-bold text-slate-500 ml-1">NOMBRE DEL MEDICAMENTO</label>
-                        <input type="text" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej: Paracetamol" />
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 ml-1">PRESENTACIÓN</label>
-                                <input type="text" value={formData.presentacion} onChange={e => setFormData({...formData, presentacion: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="500mg" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 ml-1">CANTIDAD</label>
-                                <input type="number" value={formData.cantidad} onChange={e => setFormData({...formData, cantidad: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="0" />
                             </div>
                         </div>
+                    )}
 
-                        <label className="block text-xs font-bold text-slate-500 ml-1">CATEGORÍA</label>
-                        <input type="text" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" placeholder="Analgésico" />
-
-                        <label className="block text-xs font-bold text-slate-500 ml-1">FECHA DE VENCIMIENTO</label>
-                        <input type="date" value={formData.vencimiento} onChange={e => setFormData({...formData, vencimiento: e.target.value})} className="w-full p-4 rounded-xl border-slate-200 border outline-none" />
-
-                        <button onClick={handleRegister} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold mt-4 shadow-xl active:scale-95 transition-transform">GUARDAR EN SISTEMA</button>
-                    </div>
-                </div>
-            );
-
-            const renderSubtract = () => (
-                <div className="p-4 space-y-4 animate-in slide-in-from-right duration-300">
-                    <div className="flex justify-between items-center mb-2">
-                        <h2 className="text-xl font-bold text-slate-800">Dar de Baja / Retirar</h2>
-                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                    {/* HEADER */}
+                    <div className="bg-indigo-700 text-white p-6 rounded-b-[40px] shadow-lg mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                            <h1 className="text-2xl font-bold">Farmacia Iglesia</h1>
+                            <button onClick={() => setShowApiKeyModal(true)} className="p-2 bg-white/20 rounded-lg"><Icons.Camera /></button>
+                        </div>
+                        <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest">Sistema IA v3.0 Completo</p>
                     </div>
 
-                    {!selectedMed ? (
-                        <>
-                            <div className="bg-orange-50 p-4 rounded-2xl border-2 border-dashed border-orange-200 mb-4">
-                                <p className="text-xs font-bold text-orange-700 mb-2">¿TIENES EL MEDICAMENTO? ESCANEA:</p>
-                                <div className="flex gap-2 overflow-x-auto mb-3">
-                                    {capturedImages.map((img, i) => (
-                                        <img key={i} src={img} className="w-16 h-16 object-cover rounded-lg" />
+                    {/* CONTENIDO DINÁMICO */}
+                    {view === 'home' && (
+                        <div className="px-4 space-y-4">
+                            {/* BOTONES PRINCIPALES */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={() => navigateTo('register')} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center gap-2 active:scale-95 transition-all">
+                                    <div className="text-green-500"><Icons.Plus /></div>
+                                    <span className="font-bold text-slate-700 uppercase text-xs">Registrar</span>
+                                </button>
+                                <button onClick={() => navigateTo('subtract')} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center gap-2 active:scale-95 transition-all">
+                                    <div className="text-orange-500"><Icons.Minus /></div>
+                                    <span className="font-bold text-slate-700 uppercase text-xs">Dar de Baja</span>
+                                </button>
+                                <button onClick={() => navigateTo('inventory')} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center gap-2 active:scale-95 transition-all">
+                                    <div className="text-blue-500"><Icons.Search /></div>
+                                    <span className="font-bold text-slate-700 uppercase text-xs">Inventario</span>
+                                </button>
+                                <button onClick={() => navigateTo('history')} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center gap-2 active:scale-95 transition-all">
+                                    <div className="text-purple-500"><Icons.History /></div>
+                                    <span className="font-bold text-slate-700 uppercase text-xs">Historial</span>
+                                </button>
+                            </div>
+
+                            {/* RESUMEN DE STOCK */}
+                            <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
+                                <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2 uppercase text-sm tracking-wider">
+                                    <Icons.Alert /> Estado de Almacén
+                                </h2>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-blue-50 p-4 rounded-2xl">
+                                        <div className="text-2xl font-bold text-blue-600">{medicamentos.length}</div>
+                                        <div className="text-[10px] text-blue-400 font-bold uppercase">Medicamentos</div>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-2xl">
+                                        <div className="text-2xl font-bold text-green-600">{medicamentos.reduce((a,b) => a + b.cantidad, 0)}</div>
+                                        <div className="text-[10px] text-green-400 font-bold uppercase">Stock Total</div>
+                                    </div>
+                                </div>
+                                
+                                {/* ACORDEONES DE VENCIMIENTO */}
+                                <div className="mt-4 space-y-2">
+                                    <button onClick={() => setShowPorVencer(!showPorVencer)} className="w-full flex justify-between bg-orange-50 p-3 rounded-xl text-orange-700 font-bold text-xs uppercase">
+                                        Por Vencer ({medsPorVencer.length}) <Icons.ChevronDown />
+                                    </button>
+                                    {showPorVencer && medsPorVencer.map(m => (
+                                        <div key={m.id} className="p-3 bg-white border-l-4 border-orange-400 text-xs shadow-sm rounded-r-xl">
+                                            <b>{m.nombre}</b> - Vence en {getDaysUntilExpiry(m.vencimiento)} días
+                                        </div>
                                     ))}
-                                    <label className="w-16 h-16 flex items-center justify-center bg-white rounded-lg border shadow-sm cursor-pointer">
+
+                                    <button onClick={() => setShowVencidos(!showVencidos)} className="w-full flex justify-between bg-red-50 p-3 rounded-xl text-red-700 font-bold text-xs uppercase">
+                                        Vencidos ({medsVencidos.length}) <Icons.ChevronDown />
+                                    </button>
+                                    {showVencidos && medsVencidos.map(m => (
+                                        <div key={m.id} className="p-3 bg-white border-l-4 border-red-400 text-xs shadow-sm rounded-r-xl flex justify-between items-center">
+                                            <span><b>{m.nombre}</b> (Venció: {m.vencimiento})</span>
+                                            <button onClick={async () => {
+                                                const { deleteDoc, doc } = window.firebaseModules;
+                                                if(confirm("¿Eliminar?")) {
+                                                    await deleteDoc(doc(window.db, 'medicamentos', m.id));
+                                                    fetchData();
+                                                }
+                                            }} className="text-red-500 p-1"><Icons.Trash /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'register' && (
+                        <div className="p-6 animate-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Nuevo Ingreso</h2>
+                                <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-4 rounded-3xl border-2 border-dashed border-indigo-200 mb-6">
+                                <div className="flex gap-2 overflow-x-auto mb-4">
+                                    {capturedImages.map((img, i) => (
+                                        <div key={i} className="relative shrink-0">
+                                            <img src={img} className="w-20 h-20 object-cover rounded-2xl border-2 border-white shadow-md" />
+                                            <button onClick={() => setCapturedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><Icons.X /></button>
+                                        </div>
+                                    ))}
+                                    <label className="w-20 h-20 flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-indigo-100 shadow-sm cursor-pointer active:bg-indigo-50">
                                         <Icons.Camera />
-                                        <input type="file" accept="image/*" capture="environment" multiple onChange={handleCapture} className="hidden" />
+                                        <span className="text-[10px] font-bold mt-1 uppercase text-indigo-400">Foto</span>
+                                        <input type="file" accept="image/*" multiple onChange={handleCapture} className="hidden" />
                                     </label>
                                 </div>
                                 {capturedImages.length > 0 && (
-                                    <button onClick={() => processWithIA('search')} disabled={isProcessingIA} className="w-full bg-orange-600 text-white py-2 rounded-lg font-bold flex justify-center">
-                                        {isProcessingIA ? <Icons.Loader /> : 'BUSCAR POR IMAGEN'}
+                                    <button onClick={() => processIA('register')} disabled={isProcessingIA} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg flex justify-center items-center gap-2 uppercase text-sm tracking-widest">
+                                        {isProcessingIA ? <Icons.Loader /> : 'Extraer Datos con IA'}
                                     </button>
                                 )}
                             </div>
-                            <input type="text" placeholder="🔍 Buscar nombre o categoría..." className="w-full p-4 rounded-xl border shadow-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                                {filteredMeds.map(m => (
-                                    <div key={m.id} onClick={() => setSelectedMed(m)} className="p-4 bg-white rounded-xl border border-slate-100 flex justify-between items-center active:bg-slate-50">
+
+                            <div className="space-y-4">
+                                <input type="text" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full p-4 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Nombre Comercial" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="text" value={formData.presentacion} onChange={e => setFormData({...formData, presentacion: e.target.value})} className="w-full p-4 rounded-2xl border-none shadow-sm outline-none" placeholder="Presentación" />
+                                    <input type="number" value={formData.cantidad} onChange={e => setFormData({...formData, cantidad: e.target.value})} className="w-full p-4 rounded-2xl border-none shadow-sm outline-none" placeholder="Cantidad" />
+                                </div>
+                                <input type="text" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} className="w-full p-4 rounded-2xl border-none shadow-sm outline-none" placeholder="Categoría (ej. Analgésico)" />
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Fecha de Vencimiento</label>
+                                    <input type="date" value={formData.vencimiento} onChange={e => setFormData({...formData, vencimiento: e.target.value})} className="w-full p-4 rounded-2xl border-none shadow-sm outline-none" />
+                                </div>
+                                <button onClick={handleSave} className="w-full bg-slate-900 text-white py-5 rounded-[28px] font-bold shadow-xl mt-4 active:scale-95 transition-transform uppercase tracking-widest">Guardar Medicamento</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'subtract' && (
+                        <div className="p-6 animate-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold">Dar de Baja</h2>
+                                <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                            </div>
+
+                            {!selectedMed ? (
+                                <>
+                                    <div className="relative mb-6">
+                                        <input type="text" placeholder="Buscar medicamento..." className="w-full p-5 pl-12 rounded-3xl border-none shadow-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><Icons.Search /></div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {medicamentos.filter(m => m.nombre.toLowerCase().includes(searchTerm.toLowerCase())).map(m => (
+                                            <div key={m.id} onClick={() => setSelectedMed(m)} className="p-5 bg-white rounded-3xl border border-slate-100 flex justify-between items-center active:bg-indigo-50 transition-colors shadow-sm">
+                                                <div>
+                                                    <div className="font-bold text-slate-800">{m.nombre}</div>
+                                                    <div className="text-xs text-slate-400 uppercase">{m.presentacion}</div>
+                                                </div>
+                                                <div className="bg-slate-100 px-4 py-2 rounded-2xl font-bold text-slate-600 text-sm">{m.cantidad}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 text-center animate-in">
+                                    <h3 className="text-2xl font-bold mb-1">{selectedMed.nombre}</h3>
+                                    <p className="text-slate-400 text-sm mb-8 uppercase tracking-widest">{selectedMed.presentacion}</p>
+                                    
+                                    <div className="flex items-center justify-center gap-6 mb-8">
+                                        <button onClick={() => setUnidadesABajar(Math.max(1, unidadesABajar - 1))} className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><Icons.Minus /></button>
+                                        <span className="text-5xl font-bold text-indigo-600">{unidadesABajar}</span>
+                                        <button onClick={() => setUnidadesABajar(Math.min(selectedMed.cantidad, unidadesABajar + 1))} className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><Icons.Plus /></button>
+                                    </div>
+
+                                    <input type="text" placeholder="¿Para quién o qué destino?" value={destinoEntrega} onChange={e => setDestinoEntrega(e.target.value)} className="w-full p-4 bg-slate-50 rounded-2xl mb-6 outline-none text-center" />
+                                    
+                                    <button onClick={handleBaja} className="w-full bg-orange-500 text-white py-5 rounded-[28px] font-bold shadow-lg shadow-orange-200 mb-3">CONFIRMAR BAJA</button>
+                                    <button onClick={() => setSelectedMed(null)} className="w-full text-slate-400 font-bold py-2 text-sm uppercase">Cancelar</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {view === 'inventory' && (
+                        <div className="p-6">
+                             <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold">Inventario Real</h2>
+                                <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
+                            </div>
+                            <input type="text" placeholder="Filtrar por nombre o categoría..." className="w-full p-4 rounded-2xl border-none shadow-sm mb-4 outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            <div className="space-y-3">
+                                {medicamentos.filter(m => m.nombre.toLowerCase().includes(searchTerm.toLowerCase())).map(m => (
+                                    <div key={m.id} className="p-4 bg-white rounded-2xl border border-slate-100 flex justify-between items-start">
                                         <div>
-                                            <div className="font-bold text-slate-800">{m.nombre}</div>
-                                            <div className="text-xs text-slate-500">{m.presentacion} - {m.categoria}</div>
+                                            <div className="font-bold">{m.nombre}</div>
+                                            <div className="text-[10px] text-slate-400 uppercase font-bold">{m.categoria}</div>
+                                            <div className="text-[10px] text-red-500 font-bold mt-1 uppercase">Vence: {m.vencimiento}</div>
                                         </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${m.cantidad < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>Stock: {m.cantidad}</div>
+                                        <div className="text-right">
+                                            <div className="text-xl font-bold text-indigo-600">{m.cantidad}</div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase leading-none">unid</div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </>
-                    ) : (
-                        <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-                            <div className="text-center">
-                                <h3 className="text-lg font-bold">{selectedMed.nombre}</h3>
-                                <p className="text-sm text-slate-500">{selectedMed.presentacion}</p>
-                            </div>
-                            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400">RETIRAR</label>
-                                    <input type="number" value={unidadesARetirar} onChange={e => setUnidadesARetirar(e.target.value)} className="bg-transparent text-2xl font-bold w-20 outline-none" />
-                                </div>
-                                <div className="text-right">
-                                    <label className="block text-[10px] font-bold text-slate-400">DISPONIBLE</label>
-                                    <div className="text-2xl font-bold text-slate-400">{selectedMed.cantidad}</div>
-                                </div>
-                            </div>
-                            <label className="block text-xs font-bold text-slate-500 ml-1 uppercase">Destino / Persona que recibe</label>
-                            <input type="text" value={destinoRetiro} onChange={e => setDestinoRetiro(e.target.value)} className="w-full p-4 rounded-xl border outline-none" placeholder="Nombre o Institución" />
-                            <button onClick={handleBaja} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-lg">CONFIRMAR RETIRO</button>
-                            <button onClick={() => setSelectedMed(null)} className="w-full text-slate-400 font-bold py-2">CANCELAR</button>
                         </div>
                     )}
-                </div>
-            );
 
-            const renderInventory = () => (
-                <div className="p-4 space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-bold">Inventario Real</h2>
-                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
-                    </div>
-                    <input type="text" placeholder="🔍 Buscar..." className="w-full p-4 rounded-xl border outline-none shadow-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                    <div className="grid grid-cols-1 gap-2">
-                        {filteredMeds.map(m => (
-                            <div key={m.id} className="p-4 bg-white rounded-xl border flex justify-between items-start">
-                                <div>
-                                    <div className="font-bold text-slate-800">{m.nombre}</div>
-                                    <div className="text-xs text-slate-500 uppercase">{m.categoria}</div>
-                                    <div className="text-[10px] text-red-500 mt-1 font-bold">Vence: {m.vencimiento}</div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-indigo-600">{m.cantidad}</div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase">unid.</div>
-                                </div>
+                    {view === 'history' && (
+                        <div className="p-6">
+                             <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-purple-800">Historial de Bajas</h2>
+                                <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-            const renderHistory = () => (
-                <div className="p-4 space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-bold">Historial de Entregas</h2>
-                        <button onClick={() => window.history.back()} className="p-2 bg-slate-200 rounded-full"><Icons.X /></button>
-                    </div>
-                    <div className="space-y-3">
-                        {entregas.map(e => (
-                            <div key={e.id} className="p-4 bg-white rounded-xl border border-purple-100 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-purple-400"></div>
-                                <div className="flex justify-between">
-                                    <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">{new Date(e.fecha).toLocaleDateString()}</span>
-                                    <span className="text-[10px] font-bold text-slate-400">{new Date(e.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                </div>
-                                <div className="mt-1">
-                                    <div className="font-bold text-slate-800 leading-tight">{e.nombre}</div>
-                                    <div className="text-xs text-slate-500">{e.presentacion}</div>
-                                </div>
-                                <div className="mt-3 flex justify-between items-end">
-                                    <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Destino</div>
-                                        <div className="text-sm font-bold text-slate-700">{e.destino}</div>
+                            <div className="space-y-4">
+                                {entregas.map(e => (
+                                    <div key={e.id} className="p-5 bg-white rounded-3xl border-l-8 border-purple-400 shadow-sm">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(e.fecha).toLocaleString()}</span>
+                                            <span className="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs">-{e.cantidad}</span>
+                                        </div>
+                                        <div className="font-bold text-slate-800 leading-tight">{e.nombre}</div>
+                                        <div className="text-xs text-slate-400 mb-3">{e.presentacion}</div>
+                                        <div className="pt-3 border-t border-slate-50 flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                            <span className="text-xs font-bold text-slate-600 uppercase">Destino: {e.destino}</span>
+                                        </div>
                                     </div>
-                                    <div className="bg-purple-50 px-3 py-1 rounded-lg">
-                                        <span className="text-purple-700 font-bold">-{e.cantidad}</span>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-            // Settings Modal
-            if (showSettings) {
-                return (
-                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-6 text-center">
-                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
-                            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Icons.Camera />
-                            </div>
-                            <h2 className="text-xl font-bold mb-2">Clave de IA Requerida</h2>
-                            <p className="text-sm text-slate-500 mb-6">Pega tu Google Gemini API Key para habilitar el OCR multimagen.</p>
-                            <input 
-                                type="password" 
-                                className="w-full p-4 bg-slate-100 rounded-xl mb-4 border-none outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="AIzaSy..."
-                                value={apiKey}
-                                onChange={e => setApiKey(e.target.value)}
-                            />
-                            <button 
-                                onClick={() => {
-                                    localStorage.setItem('gemini_api_key_v3', apiKey);
-                                    setShowSettings(false);
-                                }}
-                                className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200"
-                            >
-                                ACTIVAR SISTEMA
-                            </button>
                         </div>
-                    </div>
-                );
-            }
-
-            if (loading) return (
-                <div className="h-screen flex flex-col items-center justify-center space-y-4">
-                    <Icons.Loader />
-                    <p className="text-xs font-bold text-slate-400 animate-pulse uppercase tracking-widest">Sincronizando Base de Datos...</p>
-                </div>
-            );
-
-            return (
-                <div className="max-w-md mx-auto min-h-screen relative shadow-2xl bg-white overflow-hidden pb-10">
-                    {/* Header Principal */}
-                    <div className="bg-slate-900 text-white p-6 pt-10 rounded-b-[40px] shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-10 -mt-10"></div>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-center mb-1">
-                                <h1 className="text-2xl font-bold tracking-tight">Farmacia <span className="text-indigo-400">Iglesia</span></h1>
-                                <button onClick={() => setShowSettings(true)} className="p-2 bg-white/10 rounded-lg"><Icons.Camera /></button>
-                            </div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest opacity-80">Gestión de Stock e Inteligencia Artificial</p>
-                        </div>
-                    </div>
-
-                    {/* Vistas Dinámicas */}
-                    <div className="relative z-20 -mt-6">
-                        {view === 'home' && renderHome()}
-                        {view === 'register' && renderRegister()}
-                        {view === 'subtract' && renderSubtract()}
-                        {view === 'inventory' && renderInventory()}
-                        {view === 'history' && renderHistory()}
-                    </div>
-
-                    {/* Footer / Safe Area */}
-                    <div className="text-center py-8 opacity-20 text-[10px] font-bold tracking-tighter uppercase">
-                        Sistema Farmacéutico de la Iglesia &copy; 2024
-                    </div>
+                    )}
                 </div>
             );
         };
