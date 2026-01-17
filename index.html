@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Reconocimiento de Medicinas</title>
+  <title>Control de Medicamentos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Estilos muy básicos, adapta a tu gusto -->
+  <!-- Estilos originales + pequeños ajustes para botón atrás y previews -->
   <style>
     body {
       margin: 0;
@@ -13,6 +13,7 @@
       background: #f5f5f5;
       color: #222;
     }
+
     header {
       background: #1976d2;
       color: #fff;
@@ -21,10 +22,12 @@
       align-items: center;
       gap: 0.75rem;
     }
+
     header h1 {
       margin: 0;
       font-size: 1.1rem;
     }
+
     .back-btn {
       background: rgba(255,255,255,0.1);
       border: none;
@@ -33,17 +36,21 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 0.9rem;
-      display: none; /* se muestra según la pantalla */
+      display: none;
     }
+
     main {
       padding: 1rem;
     }
+
     .screen {
       display: none;
     }
+
     .screen.active {
       display: block;
     }
+
     .card {
       background: #fff;
       border-radius: 8px;
@@ -51,6 +58,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       margin-bottom: 1rem;
     }
+
     .btn {
       background: #1976d2;
       color: #fff;
@@ -60,17 +68,21 @@
       cursor: pointer;
       font-size: 0.95rem;
     }
+
     .btn.secondary {
       background: #555;
     }
+
     .btn:disabled {
       opacity: 0.6;
       cursor: default;
     }
+
     .btn-block {
       width: 100%;
       text-align: center;
     }
+
     input, select, textarea {
       width: 100%;
       padding: 0.45rem;
@@ -79,25 +91,30 @@
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
+
     label {
       font-size: 0.85rem;
       font-weight: 600;
     }
+
     .row {
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
     }
+
     .col {
       flex: 1 1 0;
       min-width: 180px;
     }
+
     .images-preview {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
       margin: 0.5rem 0;
     }
+
     .images-preview img {
       width: 90px;
       height: 90px;
@@ -105,131 +122,68 @@
       border-radius: 4px;
       border: 1px solid #ccc;
     }
+
     .status {
       font-size: 0.85rem;
       margin-top: 0.5rem;
       color: #333;
     }
+
     video, canvas {
       max-width: 100%;
       border-radius: 6px;
       margin-bottom: 0.5rem;
       background: #000;
     }
+
     .hidden {
       display: none !important;
     }
+
+    /* Resto de tus estilos originales pueden ir aquí si tenías más */
   </style>
-</head>
-<body>
-  <header>
-    <button id="backButton" class="back-btn">Atrás</button>
-    <h1>Reconocimiento de Medicinas</h1>
-  </header>
 
-  <main>
-    <!-- Pantalla principal -->
-    <section id="screen-home" class="screen active">
-      <div class="card">
-        <h2>Menú principal</h2>
-        <p>Selecciona una opción.</p>
-        <button class="btn btn-block" data-go-screen="screen-registrar">Registrar medicina</button>
-        <button class="btn btn-block" data-go-screen="screen-eliminar">Eliminar medicina</button>
-      </div>
-    </section>
-
-    <!-- Pantalla Registrar -->
-    <section id="screen-registrar" class="screen">
-      <div class="card">
-        <h2>Registrar medicina</h2>
-        <p>Sube varias imágenes o usa la cámara para identificar la medicina.</p>
-
-        <div class="row">
-          <div class="col">
-            <label>Imágenes (puedes seleccionar varias)</label>
-            <input id="fileInputRegister" type="file" accept="image/*" multiple />
-            <div id="previewRegister" class="images-preview"></div>
-          </div>
-          <div class="col">
-            <label>Cámara</label>
-            <div id="cameraContainerRegister">
-              <video id="videoRegister" autoplay playsinline class="hidden"></video>
-              <canvas id="canvasRegister" class="hidden"></canvas>
-              <button id="btnOpenCameraRegister" class="btn btn-block">Abrir cámara</button>
-              <button id="btnCaptureRegister" class="btn btn-block hidden">Capturar foto</button>
-            </div>
-          </div>
-        </div>
-
-        <button id="btnAnalizarRegister" class="btn btn-block">Analizar imágenes</button>
-        <p id="statusRegister" class="status"></p>
-
-        <h3>Datos detectados</h3>
-        <label for="nombreMed">Nombre</label>
-        <input id="nombreMed" type="text" />
-
-        <label for="presentacionMed">Presentación</label>
-        <input id="presentacionMed" type="text" />
-
-        <label for="dosisMed">Dosis</label>
-        <input id="dosisMed" type="text" />
-
-        <label for="observacionesMed">Observaciones</label>
-        <textarea id="observacionesMed" rows="3"></textarea>
-
-        <button id="btnGuardarMed" class="btn btn-block">Guardar en base local</button>
-        <p id="statusGuardar" class="status"></p>
-      </div>
-    </section>
-
-    <!-- Pantalla Eliminar -->
-    <section id="screen-eliminar" class="screen">
-      <div class="card">
-        <h2>Eliminar medicina</h2>
-        <p>Sube varias imágenes o usa la cámara para identificar la medicina a eliminar.</p>
-
-        <div class="row">
-          <div class="col">
-            <label>Imágenes (puedes seleccionar varias)</label>
-            <input id="fileInputDelete" type="file" accept="image/*" multiple />
-            <div id="previewDelete" class="images-preview"></div>
-          </div>
-          <div class="col">
-            <label>Cámara</label>
-            <div id="cameraContainerDelete">
-              <video id="videoDelete" autoplay playsinline class="hidden"></video>
-              <canvas id="canvasDelete" class="hidden"></canvas>
-              <button id="btnOpenCameraDelete" class="btn btn-block">Abrir cámara</button>
-              <button id="btnCaptureDelete" class="btn btn-block hidden">Capturar foto</button>
-            </div>
-          </div>
-        </div>
-
-        <button id="btnAnalizarDelete" class="btn btn-block">Analizar imágenes</button>
-        <p id="statusDelete" class="status"></p>
-
-        <h3>Coincidencias en base local</h3>
-        <div id="resultadosDelete"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- SDK de Gemini (Web) -->
+  <!-- Firebase SDKs (igual que en tu archivo original) -->
   <script type="module">
-    /********** CONFIGURACIÓN GEMINI **********/
-    // Sustituye por tu API key
-    const API_KEY = "TU_API_KEY_AQUI";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      deleteDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Modelo de visión mejorado/gratuito (ajusta si Google cambia los nombres)
+    /********** CONFIGURACIÓN FIREBASE (REEMPLAZA POR LA TUYA ORIGINAL) **********/
+    const firebaseConfig = {
+      apiKey: "AIzaSyDVI2gA-Q_leXM74lbCErJneV3h-Xs_V5k",
+      authDomain: "farmacia-iglesia.firebaseapp.com",
+      projectId: "farmacia",
+      storageBucket: "farmacia-iglesia.firebasestorage.app",
+      messagingSenderId: "892807551500",
+      appId: "1:892807551500:web:935b4cc0bcf1dc97d1ec29",
+      measurementId: "G-HE7RWNXSY5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    /********** CONFIGURACIÓN GEMINI **********/
+    const GEMINI_API_KEY = "AIzaSyBYI5l5GmvXZczc2_d93YeSNWBGdaVU5_8"; // Google AI key
     const GEMINI_MODEL = "gemini-1.5-flash";
 
-    async function callGeminiMultiImage(images, purpose) {
-      // images: array de objetos { mimeType, dataBase64 }
-      // purpose: "registro" o "eliminar" (solo para ajustar el prompt)
+    async function callGeminiMultiImage(images) {
+      if (!GEMINI_API_KEY || GEMINI_API_KEY === "TU_API_KEY_AQUI") {
+        throw new Error(
+          "No se ha configurado una API key válida de Google AI (revisa GEMINI_API_KEY)."
+        );
+      }
+
       const promptText = `
 Eres un asistente experto en leer cajas / blisters de medicamentos.
 
-Recibirás VARIAS imágenes de la MISMA medicina (pueden ser diferentes lados de la caja, blíster, prospecto, etc.).
+Recibirás VARIAS imágenes de la MISMA medicina (diferentes lados de la caja, blíster, prospecto, etc.).
 Extrae la información combinando todas las imágenes disponibles.
 
 Devuelve solamente un JSON con esta estructura:
@@ -264,7 +218,7 @@ No añadas texto fuera del JSON.
       };
 
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: {
@@ -275,113 +229,46 @@ No añadas texto fuera del JSON.
       );
 
       if (!resp.ok) {
-        throw new Error("Error de la API Gemini: " + resp.status + " " + resp.statusText);
+        const text = await resp.text().catch(() => "");
+        throw new Error(
+          "Error de la API Gemini (" + resp.status + "): " + text
+        );
       }
 
       const data = await resp.json();
-      const candidates = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      // Intentar parsear JSON "sucio"
-      const jsonText = extractJson(candidates);
+      const txt = data?.candidates?.[0]?.content?.parts
+        ?.map(p => p.text || "")
+        .join(" ")
+        .trim() || "";
+
+      const jsonText = extractJson(txt);
       try {
         return JSON.parse(jsonText);
       } catch (e) {
-        console.error("No se pudo parsear JSON de Gemini:", e, jsonText);
-        return null;
+        console.error("JSON recibido de Gemini:", txt);
+        throw new Error("La respuesta de la IA no es un JSON válido.");
       }
     }
 
     function extractJson(text) {
-      // Quita texto antes/después si viniera con ```json etc.
-      const firstBrace = text.indexOf("{");
-      const lastBrace = text.lastIndexOf("}");
-      if (firstBrace === -1 || lastBrace === -1) {
-        return "{}";
-      }
-      return text.slice(firstBrace, lastBrace + 1);
+      const first = text.indexOf("{");
+      const last = text.lastIndexOf("}");
+      if (first === -1 || last === -1) return "{}";
+      return text.slice(first, last + 1);
     }
 
-    /********** MANEJO DE PANTALLAS Y BOTÓN ATRÁS **********/
-    const screens = {
-      home: document.getElementById("screen-home"),
-      registrar: document.getElementById("screen-registrar"),
-      eliminar: document.getElementById("screen-eliminar")
-    };
-
-    const backButton = document.getElementById("backButton");
-    const screenStack = ["home"]; // historial interno simple
-
-    function showScreen(id) {
-      Object.values(screens).forEach(s => s.classList.remove("active"));
-      const screenEl =
-        id === "home"
-          ? screens.home
-          : id === "registrar"
-          ? screens.registrar
-          : screens.eliminar;
-
-      screenEl.classList.add("active");
-
-      if (screenStack[screenStack.length - 1] !== id) {
-        screenStack.push(id);
-      }
-
-      // Mostrar / ocultar botón Atrás
-      backButton.style.display = screenStack.length > 1 ? "inline-block" : "none";
-    }
-
-    function goBack() {
-      if (screenStack.length > 1) {
-        screenStack.pop();
-        const prev = screenStack[screenStack.length - 1];
-        showScreen(prev);
-      }
-    }
-
-    backButton.addEventListener("click", () => {
-      goBack();
-    });
-
-    // Botones que cambian de pantalla
-    document.querySelectorAll("[data-go-screen]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const target = btn.getAttribute("data-go-screen");
-        if (target === "screen-registrar") showScreen("registrar");
-        else if (target === "screen-eliminar") showScreen("eliminar");
-      });
-    });
-
-    /********** BASE DE DATOS LOCAL (localStorage) **********/
-    const STORAGE_KEY = "medicinasLocal";
-
-    function loadMedicinas() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return [];
-      }
-    }
-
-    function saveMedicinas(arr) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-    }
-
-    /********** UTILIDADES PARA IMÁGENES **********/
+    /********** UTILIDADES IMAGEN **********/
     function fileListToArray(files) {
       const arr = [];
-      for (let i = 0; i < files.length; i++) {
-        arr.push(files[i]);
-      }
+      for (let i = 0; i < files.length; i++) arr.push(files[i]);
       return arr;
     }
 
-    function showPreviewImages(container, files) {
+    function showPreviewImages(container, filesOrDataURLs) {
       container.innerHTML = "";
-      files.forEach(file => {
-        const url = URL.createObjectURL(file);
+      filesOrDataURLs.forEach(item => {
         const img = document.createElement("img");
-        img.src = url;
+        img.src = typeof item === "string" ? item : URL.createObjectURL(item);
         container.appendChild(img);
       });
     }
@@ -407,20 +294,27 @@ No añadas texto fuera del JSON.
       });
     }
 
-    /********** WEBCAM (REGISTRAR Y ELIMINAR) **********/
+    /********** WEBCAM **********/
     async function setupCamera(videoEl, statusEl) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        statusEl.textContent = "La cámara no está disponible en este navegador. Usa el botón de subir archivo.";
+      if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
+        statusEl.textContent =
+          "La cámara no está disponible en este navegador. Usa el botón de subir archivo.";
         return null;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
         videoEl.srcObject = stream;
         videoEl.classList.remove("hidden");
         return stream;
       } catch (e) {
         console.error("Error al abrir la cámara:", e);
-        statusEl.textContent = "No se pudo acceder a la cámara. Usa el botón de subir archivo.";
+        statusEl.textContent =
+          "No se pudo acceder a la cámara. Usa el botón de subir archivo.";
         return null;
       }
     }
@@ -429,263 +323,547 @@ No añadas texto fuera del JSON.
       const w = videoEl.videoWidth;
       const h = videoEl.videoHeight;
       if (!w || !h) return null;
-
       canvasEl.width = w;
       canvasEl.height = h;
       const ctx = canvasEl.getContext("2d");
       ctx.drawImage(videoEl, 0, 0, w, h);
       canvasEl.classList.remove("hidden");
-      const dataURL = dataURLFromCanvas(canvasEl);
-      return dataURL;
+      return dataURLFromCanvas(canvasEl);
     }
 
-    /********** REGISTRAR MEDICINA **********/
-    const fileInputRegister = document.getElementById("fileInputRegister");
-    const previewRegister = document.getElementById("previewRegister");
-    const statusRegister = document.getElementById("statusRegister");
-    const btnAnalizarRegister = document.getElementById("btnAnalizarRegister");
-    const btnOpenCameraRegister = document.getElementById("btnOpenCameraRegister");
-    const btnCaptureRegister = document.getElementById("btnCaptureRegister");
-    const videoRegister = document.getElementById("videoRegister");
-    const canvasRegister = document.getElementById("canvasRegister");
+    /********** NAVEGACIÓN POR PANTALLAS + ATRÁS **********/
+    const screens = {};
+    document.addEventListener("DOMContentLoaded", () => {
+      // Asume IDs de pantallas similares a los del primer ejemplo
+      screens.home = document.getElementById("screen-home");
+      screens.registrar = document.getElementById("screen-registrar");
+      screens.eliminar = document.getElementById("screen-eliminar");
+      screens.historial = document.getElementById("screen-historial");
+      screens.recordatorios = document.getElementById("screen-recordatorios");
+      screens.config = document.getElementById("screen-config");
 
-    let capturedImagesRegister = []; // dataURL de fotos capturadas
-    let streamRegister = null;
+      const backButton = document.getElementById("backButton");
+      const screenStack = ["home"];
 
-    fileInputRegister.addEventListener("change", () => {
-      const files = fileListToArray(fileInputRegister.files);
-      showPreviewImages(previewRegister, files);
-      statusRegister.textContent = files.length
-        ? `Se seleccionaron ${files.length} imagen(es).`
-        : "";
-    });
-
-    btnOpenCameraRegister.addEventListener("click", async () => {
-      statusRegister.textContent = "Abriendo cámara...";
-      streamRegister = await setupCamera(videoRegister, statusRegister);
-      if (streamRegister) {
-        btnCaptureRegister.classList.remove("hidden");
-        statusRegister.textContent = "Cámara lista. Pulsa Capturar para tomar una foto.";
-      }
-    });
-
-    btnCaptureRegister.addEventListener("click", () => {
-      const dataURL = captureFromVideo(videoRegister, canvasRegister);
-      if (!dataURL) {
-        statusRegister.textContent = "No se pudo capturar la imagen.";
-        return;
-      }
-      capturedImagesRegister.push(dataURL);
-      // Mostrar también la previsualización
-      const img = document.createElement("img");
-      img.src = dataURL;
-      previewRegister.appendChild(img);
-      statusRegister.textContent = `Se capturaron ${capturedImagesRegister.length} foto(s) desde la cámara.`;
-    });
-
-    btnAnalizarRegister.addEventListener("click", async () => {
-      statusRegister.textContent = "";
-      const files = fileListToArray(fileInputRegister.files);
-
-      if (!files.length && !capturedImagesRegister.length) {
-        statusRegister.textContent = "Sube o captura al menos una imagen antes de analizar.";
-        return;
-      }
-
-      btnAnalizarRegister.disabled = true;
-      statusRegister.textContent = "Analizando imágenes, espera...";
-      try {
-        const imagesForGemini = [];
-
-        // Archivos subidos
-        for (const f of files) {
-          const base64 = await fileToBase64(f);
-          imagesForGemini.push({
-            mimeType: f.type || "image/jpeg",
-            dataBase64: base64
-          });
-        }
-
-        // Fotos de la cámara capturadas
-        for (const dataURL of capturedImagesRegister) {
-          imagesForGemini.push({
-            mimeType: "image/jpeg",
-            dataBase64: base64FromDataURL(dataURL)
-          });
-        }
-
-        const info = await callGeminiMultiImage(imagesForGemini, "registro");
-        if (!info) {
-          statusRegister.textContent = "No se obtuvo información válida de la IA.";
-          return;
-        }
-
-        // Rellenar campos
-        document.getElementById("nombreMed").value = info.nombre || "";
-        document.getElementById("presentacionMed").value = info.presentacion || "";
-        document.getElementById("dosisMed").value = info.dosis || "";
-        document.getElementById("observacionesMed").value = info.observaciones || "";
-
-        statusRegister.textContent = "Análisis completado. Revisa y corrige los datos si es necesario.";
-      } catch (e) {
-        console.error(e);
-        statusRegister.textContent = "Error al analizar las imágenes. Revisa la consola o la API key.";
-      } finally {
-        btnAnalizarRegister.disabled = false;
-      }
-    });
-
-    const btnGuardarMed = document.getElementById("btnGuardarMed");
-    const statusGuardar = document.getElementById("statusGuardar");
-
-    btnGuardarMed.addEventListener("click", () => {
-      const nombre = document.getElementById("nombreMed").value.trim();
-      const presentacion = document.getElementById("presentacionMed").value.trim();
-      const dosis = document.getElementById("dosisMed").value.trim();
-      const obs = document.getElementById("observacionesMed").value.trim();
-
-      if (!nombre) {
-        statusGuardar.textContent = "El campo nombre es obligatorio.";
-        return;
-      }
-
-      const data = loadMedicinas();
-      data.push({
-        id: Date.now(),
-        nombre,
-        presentacion,
-        dosis,
-        observaciones: obs
-      });
-      saveMedicinas(data);
-      statusGuardar.textContent = "Medicamento guardado correctamente en la base local.";
-    });
-
-    /********** ELIMINAR MEDICINA **********/
-    const fileInputDelete = document.getElementById("fileInputDelete");
-    const previewDelete = document.getElementById("previewDelete");
-    const statusDelete = document.getElementById("statusDelete");
-    const btnAnalizarDelete = document.getElementById("btnAnalizarDelete");
-    const btnOpenCameraDelete = document.getElementById("btnOpenCameraDelete");
-    const btnCaptureDelete = document.getElementById("btnCaptureDelete");
-    const videoDelete = document.getElementById("videoDelete");
-    const canvasDelete = document.getElementById("canvasDelete");
-    const resultadosDelete = document.getElementById("resultadosDelete");
-
-    let capturedImagesDelete = [];
-    let streamDelete = null;
-
-    fileInputDelete.addEventListener("change", () => {
-      const files = fileListToArray(fileInputDelete.files);
-      showPreviewImages(previewDelete, files);
-      statusDelete.textContent = files.length
-        ? `Se seleccionaron ${files.length} imagen(es).`
-        : "";
-    });
-
-    btnOpenCameraDelete.addEventListener("click", async () => {
-      statusDelete.textContent = "Abriendo cámara...";
-      streamDelete = await setupCamera(videoDelete, statusDelete);
-      if (streamDelete) {
-        btnCaptureDelete.classList.remove("hidden");
-        statusDelete.textContent = "Cámara lista. Pulsa Capturar para tomar una foto.";
-      }
-    });
-
-    btnCaptureDelete.addEventListener("click", () => {
-      const dataURL = captureFromVideo(videoDelete, canvasDelete);
-      if (!dataURL) {
-        statusDelete.textContent = "No se pudo capturar la imagen.";
-        return;
-      }
-      capturedImagesDelete.push(dataURL);
-      const img = document.createElement("img");
-      img.src = dataURL;
-      previewDelete.appendChild(img);
-      statusDelete.textContent = `Se capturaron ${capturedImagesDelete.length} foto(s) desde la cámara.`;
-    });
-
-    btnAnalizarDelete.addEventListener("click", async () => {
-      statusDelete.textContent = "";
-      resultadosDelete.innerHTML = "";
-      const files = fileListToArray(fileInputDelete.files);
-
-      if (!files.length && !capturedImagesDelete.length) {
-        statusDelete.textContent = "Sube o captura al menos una imagen antes de analizar.";
-        return;
-      }
-
-      btnAnalizarDelete.disabled = true;
-      statusDelete.textContent = "Analizando imágenes, espera...";
-      try {
-        const imagesForGemini = [];
-
-        for (const f of files) {
-          const base64 = await fileToBase64(f);
-          imagesForGemini.push({
-            mimeType: f.type || "image/jpeg",
-            dataBase64: base64
-          });
-        }
-
-        for (const dataURL of capturedImagesDelete) {
-          imagesForGemini.push({
-            mimeType: "image/jpeg",
-            dataBase64: base64FromDataURL(dataURL)
-          });
-        }
-
-        const info = await callGeminiMultiImage(imagesForGemini, "eliminar");
-        if (!info) {
-          statusDelete.textContent = "No se obtuvo información válida de la IA.";
-          return;
-        }
-
-        const nombreDetectado = (info.nombre || "").toLowerCase();
-        const base = loadMedicinas();
-
-        const coincidencias = base.filter(m =>
-          m.nombre.toLowerCase().includes(nombreDetectado) ||
-          nombreDetectado.includes(m.nombre.toLowerCase())
-        );
-
-        if (!coincidencias.length) {
-          statusDelete.textContent = "No se encontraron coincidencias en la base local para lo detectado.";
-          return;
-        }
-
-        statusDelete.textContent = "Selecciona qué registro eliminar.";
-        coincidencias.forEach(med => {
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <strong>${med.nombre}</strong><br/>
-            Presentación: ${med.presentacion || "-"}<br/>
-            Dosis: ${med.dosis || "-"}<br/>
-            Observaciones: ${med.observaciones || "-"}<br/><br/>
-          `;
-          const btnDel = document.createElement("button");
-          btnDel.className = "btn secondary";
-          btnDel.textContent = "Eliminar este registro";
-          btnDel.addEventListener("click", () => {
-            const all = loadMedicinas();
-            const filtrado = all.filter(x => x.id !== med.id);
-            saveMedicinas(filtrado);
-            div.remove();
-          });
-          div.appendChild(btnDel);
-          resultadosDelete.appendChild(div);
+      function showScreen(id) {
+        Object.values(screens).forEach(s => {
+          if (!s) return;
+          s.classList.remove("active");
         });
-      } catch (e) {
-        console.error(e);
-        statusDelete.textContent = "Error al analizar las imágenes. Revisa la consola o la API key.";
-      } finally {
-        btnAnalizarDelete.disabled = false;
+        const screenEl = screens[id];
+        if (screenEl) {
+          screenEl.classList.add("active");
+        }
+        if (screenStack[screenStack.length - 1] !== id) {
+          screenStack.push(id);
+        }
+        backButton.style.display =
+          screenStack.length > 1 ? "inline-block" : "none";
       }
-    });
 
-    /********** INICIO **********/
-    showScreen("home");
+      function goBack() {
+        if (screenStack.length > 1) {
+          screenStack.pop();
+          const prev = screenStack[screenStack.length - 1];
+          showScreen(prev);
+        }
+      }
+
+      backButton.addEventListener("click", () => {
+        goBack();
+      });
+
+      document.querySelectorAll("[data-go-screen]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.getAttribute("data-go-screen");
+          if (screens[target]) showScreen(target);
+        });
+      });
+
+      showScreen("home");
+
+      /********** REGISTRAR MEDICINA (INTEGRADO) **********/
+      const fileInputRegister =
+        document.getElementById("fileInputRegister");
+      const previewRegister =
+        document.getElementById("previewRegister");
+      const statusRegister =
+        document.getElementById("statusRegister");
+      const btnAnalizarRegister =
+        document.getElementById("btnAnalizarRegister");
+      const btnOpenCameraRegister =
+        document.getElementById("btnOpenCameraRegister");
+      const btnCaptureRegister =
+        document.getElementById("btnCaptureRegister");
+      const videoRegister = document.getElementById("videoRegister");
+      const canvasRegister = document.getElementById("canvasRegister");
+      const nombreMed = document.getElementById("nombreMed");
+      const presentacionMed =
+        document.getElementById("presentacionMed");
+      const dosisMed = document.getElementById("dosisMed");
+      const observacionesMed =
+        document.getElementById("observacionesMed");
+      const btnGuardarMed = document.getElementById("btnGuardarMed");
+      const statusGuardar = document.getElementById("statusGuardar");
+
+      let capturedImagesRegister = [];
+      let streamRegister = null;
+
+      if (fileInputRegister) {
+        fileInputRegister.addEventListener("change", () => {
+          const files = fileListToArray(fileInputRegister.files);
+          showPreviewImages(previewRegister, files);
+          statusRegister.textContent = files.length
+            ? `Se seleccionaron ${files.length} imagen(es).`
+            : "";
+        });
+      }
+
+      if (btnOpenCameraRegister) {
+        btnOpenCameraRegister.addEventListener("click", async () => {
+          statusRegister.textContent = "Abriendo cámara...";
+          streamRegister = await setupCamera(
+            videoRegister,
+            statusRegister
+          );
+          if (streamRegister) {
+            btnCaptureRegister.classList.remove("hidden");
+            statusRegister.textContent =
+              "Cámara lista. Pulsa Capturar para tomar una foto.";
+          }
+        });
+      }
+
+      if (btnCaptureRegister) {
+        btnCaptureRegister.addEventListener("click", () => {
+          const dataURL = captureFromVideo(
+            videoRegister,
+            canvasRegister
+          );
+          if (!dataURL) {
+            statusRegister.textContent =
+              "No se pudo capturar la imagen.";
+            return;
+          }
+          capturedImagesRegister.push(dataURL);
+          showPreviewImages(previewRegister, capturedImagesRegister);
+          statusRegister.textContent = `Se capturaron ${capturedImagesRegister.length} foto(s) desde la cámara.`;
+        });
+      }
+
+      if (btnAnalizarRegister) {
+        btnAnalizarRegister.addEventListener("click", async () => {
+          statusRegister.textContent = "";
+          const files = fileListToArray(fileInputRegister.files);
+
+          if (!files.length && !capturedImagesRegister.length) {
+            statusRegister.textContent =
+              "Sube o captura al menos una imagen antes de analizar.";
+            return;
+          }
+
+          btnAnalizarRegister.disabled = true;
+          statusRegister.textContent =
+            "Analizando imágenes con la IA, espera...";
+          try {
+            const imagesForGemini = [];
+
+            for (const f of files) {
+              const base64 = await fileToBase64(f);
+              imagesForGemini.push({
+                mimeType: f.type || "image/jpeg",
+                dataBase64: base64
+              });
+            }
+
+            for (const dataURL of capturedImagesRegister) {
+              imagesForGemini.push({
+                mimeType: "image/jpeg",
+                dataBase64: base64FromDataURL(dataURL)
+              });
+            }
+
+            const info = await callGeminiMultiImage(imagesForGemini);
+            if (!info) {
+              statusRegister.textContent =
+                "No se obtuvo información válida de la IA.";
+              return;
+            }
+
+            nombreMed.value = info.nombre || "";
+            presentacionMed.value = info.presentacion || "";
+            dosisMed.value = info.dosis || "";
+            observacionesMed.value = info.observaciones || "";
+
+            statusRegister.textContent =
+              "Análisis completado. Revisa y corrige los datos si es necesario.";
+          } catch (e) {
+            console.error(e);
+            statusRegister.textContent =
+              "Error al analizar las imágenes: " + e.message;
+          } finally {
+            btnAnalizarRegister.disabled = false;
+          }
+        });
+      }
+
+      if (btnGuardarMed) {
+        btnGuardarMed.addEventListener("click", async () => {
+          const nombre = nombreMed.value.trim();
+          const presentacion = presentacionMed.value.trim();
+          const dosis = dosisMed.value.trim();
+          const obs = observacionesMed.value.trim();
+
+          if (!nombre) {
+            statusGuardar.textContent =
+              "El campo nombre es obligatorio.";
+            return;
+          }
+
+          try {
+            await addDoc(collection(db, "medicamentos"), {
+              nombre,
+              presentacion,
+              dosis,
+              observaciones: obs,
+              creadoEn: new Date().toISOString()
+            });
+            statusGuardar.textContent =
+              "Medicamento guardado correctamente en Firebase.";
+          } catch (e) {
+            console.error(e);
+            statusGuardar.textContent =
+              "Error al guardar en Firebase: " + e.message;
+          }
+        });
+      }
+
+      /********** ELIMINAR MEDICINA (INTEGRADO) **********/
+      const fileInputDelete = document.getElementById("fileInputDelete");
+      const previewDelete = document.getElementById("previewDelete");
+      const statusDelete = document.getElementById("statusDelete");
+      const btnAnalizarDelete =
+        document.getElementById("btnAnalizarDelete");
+      const btnOpenCameraDelete =
+        document.getElementById("btnOpenCameraDelete");
+      const btnCaptureDelete =
+        document.getElementById("btnCaptureDelete");
+      const videoDelete = document.getElementById("videoDelete");
+      const canvasDelete = document.getElementById("canvasDelete");
+      const resultadosDelete =
+        document.getElementById("resultadosDelete");
+
+      let capturedImagesDelete = [];
+      let streamDelete = null;
+
+      if (fileInputDelete) {
+        fileInputDelete.addEventListener("change", () => {
+          const files = fileListToArray(fileInputDelete.files);
+          showPreviewImages(previewDelete, files);
+          statusDelete.textContent = files.length
+            ? `Se seleccionaron ${files.length} imagen(es).`
+            : "";
+        });
+      }
+
+      if (btnOpenCameraDelete) {
+        btnOpenCameraDelete.addEventListener("click", async () => {
+          statusDelete.textContent = "Abriendo cámara...";
+          streamDelete = await setupCamera(
+            videoDelete,
+            statusDelete
+          );
+          if (streamDelete) {
+            btnCaptureDelete.classList.remove("hidden");
+            statusDelete.textContent =
+              "Cámara lista. Pulsa Capturar para tomar una foto.";
+          }
+        });
+      }
+
+      if (btnCaptureDelete) {
+        btnCaptureDelete.addEventListener("click", () => {
+          const dataURL = captureFromVideo(videoDelete, canvasDelete);
+          if (!dataURL) {
+            statusDelete.textContent =
+              "No se pudo capturar la imagen.";
+            return;
+          }
+          capturedImagesDelete.push(dataURL);
+          showPreviewImages(previewDelete, capturedImagesDelete);
+          statusDelete.textContent = `Se capturaron ${capturedImagesDelete.length} foto(s) desde la cámara.`;
+        });
+      }
+
+      if (btnAnalizarDelete) {
+        btnAnalizarDelete.addEventListener("click", async () => {
+          statusDelete.textContent = "";
+          resultadosDelete.innerHTML = "";
+          const files = fileListToArray(fileInputDelete.files);
+
+          if (!files.length && !capturedImagesDelete.length) {
+            statusDelete.textContent =
+              "Sube o captura al menos una imagen antes de analizar.";
+            return;
+          }
+
+          btnAnalizarDelete.disabled = true;
+          statusDelete.textContent =
+            "Analizando imágenes con la IA, espera...";
+          try {
+            const imagesForGemini = [];
+            for (const f of files) {
+              const base64 = await fileToBase64(f);
+              imagesForGemini.push({
+                mimeType: f.type || "image/jpeg",
+                dataBase64: base64
+              });
+            }
+            for (const dataURL of capturedImagesDelete) {
+              imagesForGemini.push({
+                mimeType: "image/jpeg",
+                dataBase64: base64FromDataURL(dataURL)
+              });
+            }
+
+            const info = await callGeminiMultiImage(imagesForGemini);
+            if (!info) {
+              statusDelete.textContent =
+                "No se obtuvo información válida de la IA.";
+              return;
+            }
+
+            const nombreDetectado = (info.nombre || "").toLowerCase();
+            if (!nombreDetectado) {
+              statusDelete.textContent =
+                "La IA no identificó un nombre de medicina claro.";
+              return;
+            }
+
+            const snap = await getDocs(collection(db, "medicamentos"));
+            const coincidencias = [];
+            snap.forEach(d => {
+              const m = { id: d.id, ...d.data() };
+              const n = (m.nombre || "").toLowerCase();
+              if (
+                n.includes(nombreDetectado) ||
+                nombreDetectado.includes(n)
+              ) {
+                coincidencias.push(m);
+              }
+            });
+
+            if (!coincidencias.length) {
+              statusDelete.textContent =
+                "No se encontraron coincidencias en Firebase para lo detectado.";
+              return;
+            }
+
+            statusDelete.textContent = "Selecciona qué registro eliminar.";
+            coincidencias.forEach(med => {
+              const div = document.createElement("div");
+              div.className = "card";
+              div.innerHTML = `
+                <strong>${med.nombre || "(Sin nombre)"}</strong><br/>
+                Presentación: ${med.presentacion || "-"}<br/>
+                Dosis: ${med.dosis || "-"}<br/>
+                Observaciones: ${med.observaciones || "-"}<br/><br/>
+              `;
+              const btnDel = document.createElement("button");
+              btnDel.className = "btn secondary";
+              btnDel.textContent = "Eliminar este registro";
+              btnDel.addEventListener("click", async () => {
+                try {
+                  await deleteDoc(doc(db, "medicamentos", med.id));
+                  div.remove();
+                } catch (e) {
+                  console.error(e);
+                  alert(
+                    "No se pudo eliminar este registro: " + e.message
+                  );
+                }
+              });
+              div.appendChild(btnDel);
+              resultadosDelete.appendChild(div);
+            });
+          } catch (e) {
+            console.error(e);
+            statusDelete.textContent =
+              "Error al analizar las imágenes: " + e.message;
+          } finally {
+            btnAnalizarDelete.disabled = false;
+          }
+        });
+      }
+
+      /********** AQUÍ PUEDES REINTEGRAR TUS OTRAS PANTALLAS **********/
+      // Historial, recordatorios, configuración, etc., si en tu index original
+      // ya tenías funciones, las puedes pegar debajo respetando IDs y listeners.
+    });
   </script>
+</head>
+<body>
+  <header>
+    <button id="backButton" class="back-btn">Atrás</button>
+    <h1>Control de Medicamentos</h1>
+  </header>
+
+  <main>
+    <!-- Pantalla principal -->
+    <section id="screen-home" class="screen active">
+      <div class="card">
+        <h2>Menú principal</h2>
+        <button class="btn btn-block" data-go-screen="registrar">
+          Registrar medicina
+        </button>
+        <button class="btn btn-block" data-go-screen="eliminar">
+          Eliminar medicina
+        </button>
+        <!-- Aquí puedes volver a añadir tus otros botones (historial, etc.) -->
+      </div>
+    </section>
+
+    <!-- Pantalla Registrar -->
+    <section id="screen-registrar" class="screen">
+      <div class="card">
+        <h2>Registrar medicina</h2>
+        <p>Sube varias imágenes o usa la cámara para identificar la medicina.</p>
+
+        <div class="row">
+          <div class="col">
+            <label>Imágenes (puedes seleccionar varias)</label>
+            <input
+              id="fileInputRegister"
+              type="file"
+              accept="image/*"
+              multiple
+            />
+            <div id="previewRegister" class="images-preview"></div>
+          </div>
+          <div class="col">
+            <label>Cámara</label>
+            <div id="cameraContainerRegister">
+              <video
+                id="videoRegister"
+                autoplay
+                playsinline
+                class="hidden"
+              ></video>
+              <canvas
+                id="canvasRegister"
+                class="hidden"
+              ></canvas>
+              <button
+                id="btnOpenCameraRegister"
+                class="btn btn-block"
+              >
+                Abrir cámara
+              </button>
+              <button
+                id="btnCaptureRegister"
+                class="btn btn-block hidden"
+              >
+                Capturar foto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          id="btnAnalizarRegister"
+          class="btn btn-block"
+        >
+          Analizar imágenes
+        </button>
+        <p id="statusRegister" class="status"></p>
+
+        <h3>Datos detectados</h3>
+        <label for="nombreMed">Nombre</label>
+        <input id="nombreMed" type="text" />
+
+        <label for="presentacionMed">Presentación</label>
+        <input id="presentacionMed" type="text" />
+
+        <label for="dosisMed">Dosis</label>
+        <input id="dosisMed" type="text" />
+
+        <label for="observacionesMed">Observaciones</label>
+        <textarea id="observacionesMed" rows="3"></textarea>
+
+        <button
+          id="btnGuardarMed"
+          class="btn btn-block"
+        >
+          Guardar en Firebase
+        </button>
+        <p id="statusGuardar" class="status"></p>
+      </div>
+    </section>
+
+    <!-- Pantalla Eliminar -->
+    <section id="screen-eliminar" class="screen">
+      <div class="card">
+        <h2>Eliminar medicina</h2>
+        <p>
+          Sube varias imágenes o usa la cámara para identificar la medicina a
+          eliminar.
+        </p>
+
+        <div class="row">
+          <div class="col">
+            <label>Imágenes (puedes seleccionar varias)</label>
+            <input
+              id="fileInputDelete"
+              type="file"
+              accept="image/*"
+              multiple
+            />
+            <div id="previewDelete" class="images-preview"></div>
+          </div>
+          <div class="col">
+            <label>Cámara</label>
+            <div id="cameraContainerDelete">
+              <video
+                id="videoDelete"
+                autoplay
+                playsinline
+                class="hidden"
+              ></video>
+              <canvas
+                id="canvasDelete"
+                class="hidden"
+              ></canvas>
+              <button
+                id="btnOpenCameraDelete"
+                class="btn btn-block"
+              >
+                Abrir cámara
+              </button>
+              <button
+                id="btnCaptureDelete"
+                class="btn btn-block hidden"
+              >
+                Capturar foto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          id="btnAnalizarDelete"
+          class="btn btn-block"
+        >
+          Analizar imágenes
+        </button>
+        <p id="statusDelete" class="status"></p>
+
+        <h3>Coincidencias en Firebase</h3>
+        <div id="resultadosDelete"></div>
+      </div>
+    </section>
+
+    <!-- Pantallas adicionales (historial, recordatorios, config) pueden ir aquí
+         usando IDs: screen-historial, screen-recordatorios, screen-config -->
+  </main>
 </body>
 </html>
