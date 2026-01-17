@@ -1,869 +1,1276 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Control de Medicamentos</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Estilos originales + pequeños ajustes para botón atrás y previews -->
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #222;
-    }
-
-    header {
-      background: #1976d2;
-      color: #fff;
-      padding: 0.75rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 1.1rem;
-    }
-
-    .back-btn {
-      background: rgba(255,255,255,0.1);
-      border: none;
-      color: #fff;
-      padding: 0.35rem 0.75rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    main {
-      padding: 1rem;
-    }
-
-    .screen {
-      display: none;
-    }
-
-    .screen.active {
-      display: block;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 8px;
-      padding: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      margin-bottom: 1rem;
-    }
-
-    .btn {
-      background: #1976d2;
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.95rem;
-    }
-
-    .btn.secondary {
-      background: #555;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    .btn-block {
-      width: 100%;
-      text-align: center;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 0.45rem;
-      margin: 0.25rem 0 0.75rem 0;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
-
-    label {
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .row {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .col {
-      flex: 1 1 0;
-      min-width: 180px;
-    }
-
-    .images-preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin: 0.5rem 0;
-    }
-
-    .images-preview img {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-
-    .status {
-      font-size: 0.85rem;
-      margin-top: 0.5rem;
-      color: #333;
-    }
-
-    video, canvas {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-bottom: 0.5rem;
-      background: #000;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* Resto de tus estilos originales pueden ir aquí si tenías más */
-  </style>
-
-  <!-- Firebase SDKs (igual que en tu archivo original) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      deleteDoc,
-      doc
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    /********** CONFIGURACIÓN FIREBASE (REEMPLAZA POR LA TUYA ORIGINAL) **********/
-    const firebaseConfig = {
-      apiKey: "AIzaSyDVI2gA-Q_leXM74lbCErJneV3h-Xs_V5k",
-      authDomain: "farmacia-iglesia.firebaseapp.com",
-      projectId: "farmacia",
-      storageBucket: "farmacia-iglesia.firebasestorage.app",
-      messagingSenderId: "892807551500",
-      appId: "1:892807551500:web:935b4cc0bcf1dc97d1ec29",
-      measurementId: "G-HE7RWNXSY5"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    /********** CONFIGURACIÓN GEMINI **********/
-    const GEMINI_API_KEY = "AIzaSyBYI5l5GmvXZczc2_d93YeSNWBGdaVU5_8"; // Google AI key
-    const GEMINI_MODEL = "gemini-1.5-flash";
-
-    async function callGeminiMultiImage(images) {
-      if (!GEMINI_API_KEY || GEMINI_API_KEY === "TU_API_KEY_AQUI") {
-        throw new Error(
-          "No se ha configurado una API key válida de Google AI (revisa GEMINI_API_KEY)."
-        );
-      }
-
-      const promptText = `
-Eres un asistente experto en leer cajas / blisters de medicamentos.
-
-Recibirás VARIAS imágenes de la MISMA medicina (diferentes lados de la caja, blíster, prospecto, etc.).
-Extrae la información combinando todas las imágenes disponibles.
-
-Devuelve solamente un JSON con esta estructura:
-{
-  "nombre": "nombre comercial o genérico si solo está ese",
-  "presentacion": "comprimidos, cápsulas, solución oral, etc.",
-  "dosis": "ej: 500 mg, 5 mg/ml, etc.",
-  "observaciones": "cualquier dato adicional útil (lote, caducidad, laboratorio, via de administración, etc.)"
-}
-
-Si un dato no aparece, deja el campo como cadena vacía.
-
-No añadas texto fuera del JSON.
-`;
-
-      const parts = [{ text: promptText }];
-      for (const img of images) {
-        parts.push({
-          inlineData: {
-            mimeType: img.mimeType,
-            data: img.dataBase64
-          }
-        });
-      }
-
-      const body = {
-        contents: [
-          {
-            parts
-          }
-        ]
-      };
-
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        }
-      );
-
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        throw new Error(
-          "Error de la API Gemini (" + resp.status + "): " + text
-        );
-      }
-
-      const data = await resp.json();
-      const txt = data?.candidates?.[0]?.content?.parts
-        ?.map(p => p.text || "")
-        .join(" ")
-        .trim() || "";
-
-      const jsonText = extractJson(txt);
-      try {
-        return JSON.parse(jsonText);
-      } catch (e) {
-        console.error("JSON recibido de Gemini:", txt);
-        throw new Error("La respuesta de la IA no es un JSON válido.");
-      }
-    }
-
-    function extractJson(text) {
-      const first = text.indexOf("{");
-      const last = text.lastIndexOf("}");
-      if (first === -1 || last === -1) return "{}";
-      return text.slice(first, last + 1);
-    }
-
-    /********** UTILIDADES IMAGEN **********/
-    function fileListToArray(files) {
-      const arr = [];
-      for (let i = 0; i < files.length; i++) arr.push(files[i]);
-      return arr;
-    }
-
-    function showPreviewImages(container, filesOrDataURLs) {
-      container.innerHTML = "";
-      filesOrDataURLs.forEach(item => {
-        const img = document.createElement("img");
-        img.src = typeof item === "string" ? item : URL.createObjectURL(item);
-        container.appendChild(img);
-      });
-    }
-
-    function dataURLFromCanvas(canvas) {
-      return canvas.toDataURL("image/jpeg", 0.9);
-    }
-
-    function base64FromDataURL(dataURL) {
-      const commaIdx = dataURL.indexOf(",");
-      return dataURL.slice(commaIdx + 1);
-    }
-
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataURL = reader.result;
-          resolve(base64FromDataURL(dataURL));
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    /********** WEBCAM **********/
-    async function setupCamera(videoEl, statusEl) {
-      if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-      ) {
-        statusEl.textContent =
-          "La cámara no está disponible en este navegador. Usa el botón de subir archivo.";
-        return null;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true
-        });
-        videoEl.srcObject = stream;
-        videoEl.classList.remove("hidden");
-        return stream;
-      } catch (e) {
-        console.error("Error al abrir la cámara:", e);
-        statusEl.textContent =
-          "No se pudo acceder a la cámara. Usa el botón de subir archivo.";
-        return null;
-      }
-    }
-
-    function captureFromVideo(videoEl, canvasEl) {
-      const w = videoEl.videoWidth;
-      const h = videoEl.videoHeight;
-      if (!w || !h) return null;
-      canvasEl.width = w;
-      canvasEl.height = h;
-      const ctx = canvasEl.getContext("2d");
-      ctx.drawImage(videoEl, 0, 0, w, h);
-      canvasEl.classList.remove("hidden");
-      return dataURLFromCanvas(canvasEl);
-    }
-
-    /********** NAVEGACIÓN POR PANTALLAS + ATRÁS **********/
-    const screens = {};
-    document.addEventListener("DOMContentLoaded", () => {
-      // Asume IDs de pantallas similares a los del primer ejemplo
-      screens.home = document.getElementById("screen-home");
-      screens.registrar = document.getElementById("screen-registrar");
-      screens.eliminar = document.getElementById("screen-eliminar");
-      screens.historial = document.getElementById("screen-historial");
-      screens.recordatorios = document.getElementById("screen-recordatorios");
-      screens.config = document.getElementById("screen-config");
-
-      const backButton = document.getElementById("backButton");
-      const screenStack = ["home"];
-
-      function showScreen(id) {
-        Object.values(screens).forEach(s => {
-          if (!s) return;
-          s.classList.remove("active");
-        });
-        const screenEl = screens[id];
-        if (screenEl) {
-          screenEl.classList.add("active");
-        }
-        if (screenStack[screenStack.length - 1] !== id) {
-          screenStack.push(id);
-        }
-        backButton.style.display =
-          screenStack.length > 1 ? "inline-block" : "none";
-      }
-
-      function goBack() {
-        if (screenStack.length > 1) {
-          screenStack.pop();
-          const prev = screenStack[screenStack.length - 1];
-          showScreen(prev);
-        }
-      }
-
-      backButton.addEventListener("click", () => {
-        goBack();
-      });
-
-      document.querySelectorAll("[data-go-screen]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const target = btn.getAttribute("data-go-screen");
-          if (screens[target]) showScreen(target);
-        });
-      });
-
-      showScreen("home");
-
-      /********** REGISTRAR MEDICINA (INTEGRADO) **********/
-      const fileInputRegister =
-        document.getElementById("fileInputRegister");
-      const previewRegister =
-        document.getElementById("previewRegister");
-      const statusRegister =
-        document.getElementById("statusRegister");
-      const btnAnalizarRegister =
-        document.getElementById("btnAnalizarRegister");
-      const btnOpenCameraRegister =
-        document.getElementById("btnOpenCameraRegister");
-      const btnCaptureRegister =
-        document.getElementById("btnCaptureRegister");
-      const videoRegister = document.getElementById("videoRegister");
-      const canvasRegister = document.getElementById("canvasRegister");
-      const nombreMed = document.getElementById("nombreMed");
-      const presentacionMed =
-        document.getElementById("presentacionMed");
-      const dosisMed = document.getElementById("dosisMed");
-      const observacionesMed =
-        document.getElementById("observacionesMed");
-      const btnGuardarMed = document.getElementById("btnGuardarMed");
-      const statusGuardar = document.getElementById("statusGuardar");
-
-      let capturedImagesRegister = [];
-      let streamRegister = null;
-
-      if (fileInputRegister) {
-        fileInputRegister.addEventListener("change", () => {
-          const files = fileListToArray(fileInputRegister.files);
-          showPreviewImages(previewRegister, files);
-          statusRegister.textContent = files.length
-            ? `Se seleccionaron ${files.length} imagen(es).`
-            : "";
-        });
-      }
-
-      if (btnOpenCameraRegister) {
-        btnOpenCameraRegister.addEventListener("click", async () => {
-          statusRegister.textContent = "Abriendo cámara...";
-          streamRegister = await setupCamera(
-            videoRegister,
-            statusRegister
-          );
-          if (streamRegister) {
-            btnCaptureRegister.classList.remove("hidden");
-            statusRegister.textContent =
-              "Cámara lista. Pulsa Capturar para tomar una foto.";
-          }
-        });
-      }
-
-      if (btnCaptureRegister) {
-        btnCaptureRegister.addEventListener("click", () => {
-          const dataURL = captureFromVideo(
-            videoRegister,
-            canvasRegister
-          );
-          if (!dataURL) {
-            statusRegister.textContent =
-              "No se pudo capturar la imagen.";
-            return;
-          }
-          capturedImagesRegister.push(dataURL);
-          showPreviewImages(previewRegister, capturedImagesRegister);
-          statusRegister.textContent = `Se capturaron ${capturedImagesRegister.length} foto(s) desde la cámara.`;
-        });
-      }
-
-      if (btnAnalizarRegister) {
-        btnAnalizarRegister.addEventListener("click", async () => {
-          statusRegister.textContent = "";
-          const files = fileListToArray(fileInputRegister.files);
-
-          if (!files.length && !capturedImagesRegister.length) {
-            statusRegister.textContent =
-              "Sube o captura al menos una imagen antes de analizar.";
-            return;
-          }
-
-          btnAnalizarRegister.disabled = true;
-          statusRegister.textContent =
-            "Analizando imágenes con la IA, espera...";
-          try {
-            const imagesForGemini = [];
-
-            for (const f of files) {
-              const base64 = await fileToBase64(f);
-              imagesForGemini.push({
-                mimeType: f.type || "image/jpeg",
-                dataBase64: base64
-              });
-            }
-
-            for (const dataURL of capturedImagesRegister) {
-              imagesForGemini.push({
-                mimeType: "image/jpeg",
-                dataBase64: base64FromDataURL(dataURL)
-              });
-            }
-
-            const info = await callGeminiMultiImage(imagesForGemini);
-            if (!info) {
-              statusRegister.textContent =
-                "No se obtuvo información válida de la IA.";
-              return;
-            }
-
-            nombreMed.value = info.nombre || "";
-            presentacionMed.value = info.presentacion || "";
-            dosisMed.value = info.dosis || "";
-            observacionesMed.value = info.observaciones || "";
-
-            statusRegister.textContent =
-              "Análisis completado. Revisa y corrige los datos si es necesario.";
-          } catch (e) {
-            console.error(e);
-            statusRegister.textContent =
-              "Error al analizar las imágenes: " + e.message;
-          } finally {
-            btnAnalizarRegister.disabled = false;
-          }
-        });
-      }
-
-      if (btnGuardarMed) {
-        btnGuardarMed.addEventListener("click", async () => {
-          const nombre = nombreMed.value.trim();
-          const presentacion = presentacionMed.value.trim();
-          const dosis = dosisMed.value.trim();
-          const obs = observacionesMed.value.trim();
-
-          if (!nombre) {
-            statusGuardar.textContent =
-              "El campo nombre es obligatorio.";
-            return;
-          }
-
-          try {
-            await addDoc(collection(db, "medicamentos"), {
-              nombre,
-              presentacion,
-              dosis,
-              observaciones: obs,
-              creadoEn: new Date().toISOString()
-            });
-            statusGuardar.textContent =
-              "Medicamento guardado correctamente en Firebase.";
-          } catch (e) {
-            console.error(e);
-            statusGuardar.textContent =
-              "Error al guardar en Firebase: " + e.message;
-          }
-        });
-      }
-
-      /********** ELIMINAR MEDICINA (INTEGRADO) **********/
-      const fileInputDelete = document.getElementById("fileInputDelete");
-      const previewDelete = document.getElementById("previewDelete");
-      const statusDelete = document.getElementById("statusDelete");
-      const btnAnalizarDelete =
-        document.getElementById("btnAnalizarDelete");
-      const btnOpenCameraDelete =
-        document.getElementById("btnOpenCameraDelete");
-      const btnCaptureDelete =
-        document.getElementById("btnCaptureDelete");
-      const videoDelete = document.getElementById("videoDelete");
-      const canvasDelete = document.getElementById("canvasDelete");
-      const resultadosDelete =
-        document.getElementById("resultadosDelete");
-
-      let capturedImagesDelete = [];
-      let streamDelete = null;
-
-      if (fileInputDelete) {
-        fileInputDelete.addEventListener("change", () => {
-          const files = fileListToArray(fileInputDelete.files);
-          showPreviewImages(previewDelete, files);
-          statusDelete.textContent = files.length
-            ? `Se seleccionaron ${files.length} imagen(es).`
-            : "";
-        });
-      }
-
-      if (btnOpenCameraDelete) {
-        btnOpenCameraDelete.addEventListener("click", async () => {
-          statusDelete.textContent = "Abriendo cámara...";
-          streamDelete = await setupCamera(
-            videoDelete,
-            statusDelete
-          );
-          if (streamDelete) {
-            btnCaptureDelete.classList.remove("hidden");
-            statusDelete.textContent =
-              "Cámara lista. Pulsa Capturar para tomar una foto.";
-          }
-        });
-      }
-
-      if (btnCaptureDelete) {
-        btnCaptureDelete.addEventListener("click", () => {
-          const dataURL = captureFromVideo(videoDelete, canvasDelete);
-          if (!dataURL) {
-            statusDelete.textContent =
-              "No se pudo capturar la imagen.";
-            return;
-          }
-          capturedImagesDelete.push(dataURL);
-          showPreviewImages(previewDelete, capturedImagesDelete);
-          statusDelete.textContent = `Se capturaron ${capturedImagesDelete.length} foto(s) desde la cámara.`;
-        });
-      }
-
-      if (btnAnalizarDelete) {
-        btnAnalizarDelete.addEventListener("click", async () => {
-          statusDelete.textContent = "";
-          resultadosDelete.innerHTML = "";
-          const files = fileListToArray(fileInputDelete.files);
-
-          if (!files.length && !capturedImagesDelete.length) {
-            statusDelete.textContent =
-              "Sube o captura al menos una imagen antes de analizar.";
-            return;
-          }
-
-          btnAnalizarDelete.disabled = true;
-          statusDelete.textContent =
-            "Analizando imágenes con la IA, espera...";
-          try {
-            const imagesForGemini = [];
-            for (const f of files) {
-              const base64 = await fileToBase64(f);
-              imagesForGemini.push({
-                mimeType: f.type || "image/jpeg",
-                dataBase64: base64
-              });
-            }
-            for (const dataURL of capturedImagesDelete) {
-              imagesForGemini.push({
-                mimeType: "image/jpeg",
-                dataBase64: base64FromDataURL(dataURL)
-              });
-            }
-
-            const info = await callGeminiMultiImage(imagesForGemini);
-            if (!info) {
-              statusDelete.textContent =
-                "No se obtuvo información válida de la IA.";
-              return;
-            }
-
-            const nombreDetectado = (info.nombre || "").toLowerCase();
-            if (!nombreDetectado) {
-              statusDelete.textContent =
-                "La IA no identificó un nombre de medicina claro.";
-              return;
-            }
-
-            const snap = await getDocs(collection(db, "medicamentos"));
-            const coincidencias = [];
-            snap.forEach(d => {
-              const m = { id: d.id, ...d.data() };
-              const n = (m.nombre || "").toLowerCase();
-              if (
-                n.includes(nombreDetectado) ||
-                nombreDetectado.includes(n)
-              ) {
-                coincidencias.push(m);
-              }
-            });
-
-            if (!coincidencias.length) {
-              statusDelete.textContent =
-                "No se encontraron coincidencias en Firebase para lo detectado.";
-              return;
-            }
-
-            statusDelete.textContent = "Selecciona qué registro eliminar.";
-            coincidencias.forEach(med => {
-              const div = document.createElement("div");
-              div.className = "card";
-              div.innerHTML = `
-                <strong>${med.nombre || "(Sin nombre)"}</strong><br/>
-                Presentación: ${med.presentacion || "-"}<br/>
-                Dosis: ${med.dosis || "-"}<br/>
-                Observaciones: ${med.observaciones || "-"}<br/><br/>
-              `;
-              const btnDel = document.createElement("button");
-              btnDel.className = "btn secondary";
-              btnDel.textContent = "Eliminar este registro";
-              btnDel.addEventListener("click", async () => {
-                try {
-                  await deleteDoc(doc(db, "medicamentos", med.id));
-                  div.remove();
-                } catch (e) {
-                  console.error(e);
-                  alert(
-                    "No se pudo eliminar este registro: " + e.message
-                  );
-                }
-              });
-              div.appendChild(btnDel);
-              resultadosDelete.appendChild(div);
-            });
-          } catch (e) {
-            console.error(e);
-            statusDelete.textContent =
-              "Error al analizar las imágenes: " + e.message;
-          } finally {
-            btnAnalizarDelete.disabled = false;
-          }
-        });
-      }
-
-      /********** AQUÍ PUEDES REINTEGRAR TUS OTRAS PANTALLAS **********/
-      // Historial, recordatorios, configuración, etc., si en tu index original
-      // ya tenías funciones, las puedes pegar debajo respetando IDs y listeners.
-    });
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmacia de la Iglesia - Sistema de Gestión</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        window.firebaseModules = { initializeApp, getFirestore, collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, limit };
+    </script>
 </head>
 <body>
-  <header>
-    <button id="backButton" class="back-btn">Atrás</button>
-    <h1>Control de Medicamentos</h1>
-  </header>
+    <div id="root"></div>
 
-  <main>
-    <!-- Pantalla principal -->
-    <section id="screen-home" class="screen active">
-      <div class="card">
-        <h2>Menú principal</h2>
-        <button class="btn btn-block" data-go-screen="registrar">
-          Registrar medicina
-        </button>
-        <button class="btn btn-block" data-go-screen="eliminar">
-          Eliminar medicina
-        </button>
-        <!-- Aquí puedes volver a añadir tus otros botones (historial, etc.) -->
-      </div>
-    </section>
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
 
-    <!-- Pantalla Registrar -->
-    <section id="screen-registrar" class="screen">
-      <div class="card">
-        <h2>Registrar medicina</h2>
-        <p>Sube varias imágenes o usa la cámara para identificar la medicina.</p>
+        // ==================== ICONOS SVG ====================
+        const Camera = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+        const Search = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
+        const Package = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
+        const AlertCircle = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        const Plus = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
+        const Minus = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>;
+        const X = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+        const Loader = () => <svg className="w-full h-full animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>;
+        const SwitchCamera = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
+        const ClipboardList = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
+        const Key = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
+        const Trash = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+        const ChevronDown = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
+        const ChevronUp = () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>;
 
-        <div class="row">
-          <div class="col">
-            <label>Imágenes (puedes seleccionar varias)</label>
-            <input
-              id="fileInputRegister"
-              type="file"
-              accept="image/*"
-              multiple
-            />
-            <div id="previewRegister" class="images-preview"></div>
-          </div>
-          <div class="col">
-            <label>Cámara</label>
-            <div id="cameraContainerRegister">
-              <video
-                id="videoRegister"
-                autoplay
-                playsinline
-                class="hidden"
-              ></video>
-              <canvas
-                id="canvasRegister"
-                class="hidden"
-              ></canvas>
-              <button
-                id="btnOpenCameraRegister"
-                class="btn btn-block"
-              >
-                Abrir cámara
-              </button>
-              <button
-                id="btnCaptureRegister"
-                class="btn btn-block hidden"
-              >
-                Capturar foto
-              </button>
-            </div>
-          </div>
-        </div>
+        // ==================== DETECCIÓN DE DISPOSITIVO ====================
+        const isMobile = () => {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        };
 
-        <button
-          id="btnAnalizarRegister"
-          class="btn btn-block"
-        >
-          Analizar imágenes
-        </button>
-        <p id="statusRegister" class="status"></p>
+        // ==================== COMPONENTE PRINCIPAL ====================
+        const FarmaciaApp = () => {
+            const [activeScreen, setActiveScreen] = useState('home');
+            const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+            const [geminiApiKey, setGeminiApiKey] = useState('');
+            const [medicamentos, setMedicamentos] = useState([]);
+            const [entregas, setEntregas] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [destinoEntrega, setDestinoEntrega] = useState('');
+            const [newMed, setNewMed] = useState({
+                nombre: '',
+                presentacion: '',
+                cantidad: '',
+                vencimiento: '',
+                categoria: ''
+            });
+            const [capturedImage, setCapturedImage] = useState(null);
+            const [processedImage, setProcessedImage] = useState(null);
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [isLoading, setIsLoading] = useState(true);
+            const [subtractImage, setSubtractImage] = useState(null);
+            const [foundMedicamentos, setFoundMedicamentos] = useState([]);
+            const [cameraMode, setCameraMode] = useState('environment');
+            const [subtractCameraMode, setSubtractCameraMode] = useState('environment');
+            const [ocrResult, setOcrResult] = useState({ nombre: '', presentacion: '' });
+            const [manualSearch, setManualSearch] = useState('');
+            const [showVencidos, setShowVencidos] = useState(false);
+            const [showPorVencer, setShowPorVencer] = useState(false);
+            const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+            const [duplicateFound, setDuplicateFound] = useState(null);
 
-        <h3>Datos detectados</h3>
-        <label for="nombreMed">Nombre</label>
-        <input id="nombreMed" type="text" />
+            const fileInputRef = useRef(null);
+            const subtractFileInputRef = useRef(null);
 
-        <label for="presentacionMed">Presentación</label>
-        <input id="presentacionMed" type="text" />
+            const firebaseConfig = {
+                apiKey: "AIzaSyDVI2gA-Q_leXM74lbCErJneV3h-Xs_V5k",
+                authDomain: "farmacia-iglesia.firebaseapp.com",
+                projectId: "farmacia-iglesia",
+                storageBucket: "farmacia-iglesia.firebasestorage.app",
+                messagingSenderId: "892807551500",
+                appId: "1:892807551500:web:935b4cc0bcf1dc97d1ec29",
+                measurementId: "G-HE7RWNXSY5"
+            };
 
-        <label for="dosisMed">Dosis</label>
-        <input id="dosisMed" type="text" />
+            useEffect(() => {
+                const initApp = async () => {
+                    const savedKey = localStorage.getItem('gemini_api_key_v2');
+                    if (savedKey) {
+                        setGeminiApiKey(savedKey);
+                    } else {
+                        setShowApiKeyModal(true);
+                    }
 
-        <label for="observacionesMed">Observaciones</label>
-        <textarea id="observacionesMed" rows="3"></textarea>
+                    try {
+                        const { initializeApp, getFirestore } = window.firebaseModules;
+                        const app = initializeApp(firebaseConfig);
+                        const db = getFirestore(app);
+                        window.firebaseDb = db;
 
-        <button
-          id="btnGuardarMed"
-          class="btn btn-block"
-        >
-          Guardar en Firebase
-        </button>
-        <p id="statusGuardar" class="status"></p>
-      </div>
-    </section>
+                        await loadMedicamentos();
+                        await loadEntregas();
+                    } catch (error) {
+                        console.error('Error inicializando Firebase:', error);
+                        alert('⚠️ Error conectando con Firebase');
+                    }
 
-    <!-- Pantalla Eliminar -->
-    <section id="screen-eliminar" class="screen">
-      <div class="card">
-        <h2>Eliminar medicina</h2>
-        <p>
-          Sube varias imágenes o usa la cámara para identificar la medicina a
-          eliminar.
-        </p>
+                    setIsLoading(false);
+                };
 
-        <div class="row">
-          <div class="col">
-            <label>Imágenes (puedes seleccionar varias)</label>
-            <input
-              id="fileInputDelete"
-              type="file"
-              accept="image/*"
-              multiple
-            />
-            <div id="previewDelete" class="images-preview"></div>
-          </div>
-          <div class="col">
-            <label>Cámara</label>
-            <div id="cameraContainerDelete">
-              <video
-                id="videoDelete"
-                autoplay
-                playsinline
-                class="hidden"
-              ></video>
-              <canvas
-                id="canvasDelete"
-                class="hidden"
-              ></canvas>
-              <button
-                id="btnOpenCameraDelete"
-                class="btn btn-block"
-              >
-                Abrir cámara
-              </button>
-              <button
-                id="btnCaptureDelete"
-                class="btn btn-block hidden"
-              >
-                Capturar foto
-              </button>
-            </div>
-          </div>
-        </div>
+                const timer = setTimeout(() => {
+                    if (window.firebaseModules) {
+                        initApp();
+                    }
+                }, 500);
 
-        <button
-          id="btnAnalizarDelete"
-          class="btn btn-block"
-        >
-          Analizar imágenes
-        </button>
-        <p id="statusDelete" class="status"></p>
+                return () => clearTimeout(timer);
+            }, []);
 
-        <h3>Coincidencias en Firebase</h3>
-        <div id="resultadosDelete"></div>
-      </div>
-    </section>
+            const loadMedicamentos = async () => {
+                try {
+                    const { collection, getDocs } = window.firebaseModules;
+                    const querySnapshot = await getDocs(collection(window.firebaseDb, 'medicamentos'));
+                    const meds = [];
+                    querySnapshot.forEach((doc) => {
+                        meds.push({ id: doc.id, ...doc.data() });
+                    });
+                    setMedicamentos(meds);
+                } catch (error) {
+                    console.error('Error cargando medicamentos:', error);
+                }
+            };
 
-    <!-- Pantallas adicionales (historial, recordatorios, config) pueden ir aquí
-         usando IDs: screen-historial, screen-recordatorios, screen-config -->
-  </main>
+            const loadEntregas = async () => {
+                try {
+                    const { collection, getDocs, query, orderBy, limit } = window.firebaseModules;
+                    const q = query(collection(window.firebaseDb, 'entregas'), orderBy('fecha', 'desc'), limit(50));
+                    const querySnapshot = await getDocs(q);
+                    const ents = [];
+                    querySnapshot.forEach((doc) => {
+                        ents.push({ id: doc.id, ...doc.data() });
+                    });
+                    setEntregas(ents);
+                } catch (error) {
+                    console.error('Error cargando entregas:', error);
+                }
+            };
+
+            const saveApiKey = () => {
+                if (geminiApiKey && geminiApiKey.trim().startsWith('AIzaSy')) {
+                    localStorage.setItem('gemini_api_key_v2', geminiApiKey.trim());
+                    setShowApiKeyModal(false);
+                    alert('✅ API Key configurada correctamente');
+                } else {
+                    alert('⚠️ Por favor ingresa una API Key válida de Google Gemini');
+                }
+            };
+
+            const getDaysUntilExpiry = (fecha) => {
+                const today = new Date();
+                const expiry = new Date(fecha);
+                const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+                return diff;
+            };
+
+            const getExpiryStatus = (fecha) => {
+                const days = getDaysUntilExpiry(fecha);
+                if (days < 0) return { color: 'bg-red-100 border-red-500 text-red-800', text: 'VENCIDO' };
+                if (days <= 30) return { color: 'bg-orange-100 border-orange-500 text-orange-800', text: 'Vence en ' + days + ' días' };
+                return { color: 'bg-green-100 border-green-500 text-green-800', text: 'Vigente' };
+            };
+
+            const medicamentosVencidos = medicamentos.filter(m => getDaysUntilExpiry(m.vencimiento) < 0);
+            const medicamentosPorVencer = medicamentos.filter(m => {
+                const days = getDaysUntilExpiry(m.vencimiento);
+                return days >= 0 && days <= 30;
+            });
+
+            const checkForDuplicates = (medData) => {
+                const duplicates = medicamentos.filter(m => {
+                    const nombreMatch = m.nombre.toLowerCase().trim() === medData.nombre.toLowerCase().trim();
+                    const presentacionMatch = m.presentacion.toLowerCase().trim() === medData.presentacion.toLowerCase().trim();
+                    return nombreMatch && presentacionMatch;
+                });
+                return duplicates.length > 0 ? duplicates[0] : null;
+            };
+
+            const compressImage = (file, maxSizeMB = 0.5) => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const maxDimension = 1024;
+
+                            if (width > height && width > maxDimension) {
+                                height = (height * maxDimension) / width;
+                                width = maxDimension;
+                            } else if (height > maxDimension) {
+                                width = (width * maxDimension) / height;
+                                height = maxDimension;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.translate(canvas.width, 0);
+                            ctx.scale(-1, 1);
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            canvas.toBlob((blob) => {
+                                const reader2 = new FileReader();
+                                reader2.onload = (e2) => resolve(e2.target.result);
+                                reader2.readAsDataURL(blob);
+                            }, 'image/jpeg', 0.7);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const processImageWithAI = async (imageData) => {
+                if (!geminiApiKey) {
+                    alert('⚠️ Por favor configura tu API Key de Google Gemini primero');
+                    setShowApiKeyModal(true);
+                    return;
+                }
+
+                setIsProcessing(true);
+                try {
+                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiApiKey;
+                    const response = await fetch(apiUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: "Analiza esta imagen de un medicamento y extrae: nombre, presentación (tipo y dosis), categoría farmacológica, y fecha de vencimiento (formato YYYY-MM-DD). Responde SOLO con JSON: {\"nombre\":\"\",\"presentacion\":\"\",\"categoria\":\"\",\"vencimiento\":\"YYYY-MM-DD o null\"}" },
+                                    { inline_data: { mime_type: "image/jpeg", data: imageData.split(',')[1] } }
+                                ]
+                            }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text.trim();
+                    const cleanText = text.replace(/```json|```/g, '').trim();
+                    const result = JSON.parse(cleanText);
+
+                    setNewMed({
+                        ...newMed,
+                        nombre: result.nombre || '',
+                        presentacion: result.presentacion || '',
+                        categoria: result.categoria || '',
+                        vencimiento: result.vencimiento || ''
+                    });
+                } catch (error) {
+                    console.error('Error al procesar imagen:', error);
+                    alert('⚠️ Error al analizar la imagen. Verifica tu API Key.');
+                }
+                setIsProcessing(false);
+            };
+
+            const processImageForSubtract = async (imageData) => {
+                if (!geminiApiKey) {
+                    alert('⚠️ Por favor configura tu API Key de Google Gemini primero');
+                    setShowApiKeyModal(true);
+                    return;
+                }
+
+                setIsProcessing(true);
+                try {
+                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiApiKey;
+                    const response = await fetch(apiUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: "Analiza esta imagen de un medicamento y extrae SOLO el nombre y la presentación. Responde con JSON: {\"nombre\":\"\",\"presentacion\":\"\"}" },
+                                    { inline_data: { mime_type: "image/jpeg", data: imageData.split(',')[1] } }
+                                ]
+                            }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text.trim();
+                    const cleanText = text.replace(/```json|```/g, '').trim();
+                    const result = JSON.parse(cleanText);
+
+                    setOcrResult(result);
+
+                    const matches = medicamentos.filter(m => {
+                        const nombreMatch = m.nombre.toLowerCase().includes(result.nombre.toLowerCase()) || 
+                                           result.nombre.toLowerCase().includes(m.nombre.toLowerCase());
+                        const presentacionMatch = result.presentacion && result.presentacion !== "No identificado" 
+                            ? m.presentacion.toLowerCase().includes(result.presentacion.toLowerCase()) ||
+                              result.presentacion.toLowerCase().includes(m.presentacion.toLowerCase())
+                            : true;
+                        return nombreMatch && presentacionMatch;
+                    });
+
+                    setFoundMedicamentos(matches);
+
+                    if (matches.length === 0) {
+                        alert('❌ No se encontró ningún medicamento que coincida');
+                    }
+                } catch (error) {
+                    console.error('Error al procesar imagen:', error);
+                    alert('⚠️ Error al analizar la imagen. Verifica tu API Key.');
+                }
+                setIsProcessing(false);
+            };
+
+            const handleImageCapture = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setCapturedImage(URL.createObjectURL(file));
+                    const compressed = await compressImage(file);
+                    setProcessedImage(compressed);
+                    processImageWithAI(compressed);
+                }
+            };
+
+            const handleSubtractImageCapture = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setSubtractImage(URL.createObjectURL(file));
+                    const compressed = await compressImage(file);
+                    processImageForSubtract(compressed);
+                }
+            };
+
+            const handleSaveNewMed = async () => {
+                if (newMed.nombre && newMed.cantidad && newMed.vencimiento) {
+                    const medData = {
+                        nombre: newMed.nombre,
+                        presentacion: newMed.presentacion || 'No especificada',
+                        categoria: newMed.categoria || 'Sin categoría',
+                        cantidad: parseInt(newMed.cantidad),
+                        vencimiento: newMed.vencimiento,
+                        imagen: processedImage || capturedImage,
+                        fechaRegistro: new Date().toISOString()
+                    };
+
+                    const duplicate = checkForDuplicates(medData);
+
+                    if (duplicate) {
+                        setDuplicateFound(duplicate);
+                        setShowDuplicateModal(true);
+                    } else {
+                        await saveNewMedicamento(medData);
+                    }
+                } else {
+                    alert('⚠️ Completa todos los campos obligatorios');
+                }
+            };
+
+            const saveNewMedicamento = async (medData) => {
+                try {
+                    const { collection, addDoc } = window.firebaseModules;
+                    const docRef = await addDoc(collection(window.firebaseDb, 'medicamentos'), medData);
+                    setMedicamentos([...medicamentos, { id: docRef.id, ...medData }]);
+                    setNewMed({ nombre: '', presentacion: '', cantidad: '', vencimiento: '', categoria: '' });
+                    setCapturedImage(null);
+                    setProcessedImage(null);
+                    setActiveScreen('home');
+                    alert('✅ Medicamento registrado exitosamente');
+                } catch (error) {
+                    console.error('Error guardando medicamento:', error);
+                    alert('⚠️ Error al guardar');
+                }
+            };
+
+            const handleSumarAExistente = async () => {
+                try {
+                    const { doc, updateDoc } = window.firebaseModules;
+                    const nuevaCantidad = duplicateFound.cantidad + parseInt(newMed.cantidad);
+                    const medRef = doc(window.firebaseDb, 'medicamentos', duplicateFound.id);
+
+                    await updateDoc(medRef, { cantidad: nuevaCantidad });
+
+                    setMedicamentos(medicamentos.map(m => 
+                        m.id === duplicateFound.id ? { ...m, cantidad: nuevaCantidad } : m
+                    ));
+
+                    setShowDuplicateModal(false);
+                    setDuplicateFound(null);
+                    setNewMed({ nombre: '', presentacion: '', cantidad: '', vencimiento: '', categoria: '' });
+                    setCapturedImage(null);
+                    setProcessedImage(null);
+                    setActiveScreen('home');
+                    alert('✅ Se sumaron ' + newMed.cantidad + ' unidades al lote existente. Total: ' + nuevaCantidad);
+                } catch (error) {
+                    console.error('Error actualizando medicamento:', error);
+                    alert('⚠️ Error al actualizar');
+                }
+            };
+
+            const handleCrearNuevoLote = async () => {
+                const medData = {
+                    nombre: newMed.nombre,
+                    presentacion: newMed.presentacion || 'No especificada',
+                    categoria: newMed.categoria || 'Sin categoría',
+                    cantidad: parseInt(newMed.cantidad),
+                    vencimiento: newMed.vencimiento,
+                    imagen: processedImage || capturedImage,
+                    fechaRegistro: new Date().toISOString()
+                };
+
+                setShowDuplicateModal(false);
+                setDuplicateFound(null);
+                await saveNewMedicamento(medData);
+            };
+
+            const handleSubtractStock = async (med, cantidad) => {
+                if (cantidad > 0 && cantidad <= med.cantidad) {
+                    try {
+                        const { doc, updateDoc, collection, addDoc } = window.firebaseModules;
+                        const newCantidad = med.cantidad - cantidad;
+                        const medRef = doc(window.firebaseDb, 'medicamentos', med.id);
+
+                        await updateDoc(medRef, { cantidad: newCantidad });
+
+                        const entregaData = {
+                            medicamentoId: med.id,
+                            nombre: med.nombre,
+                            presentacion: med.presentacion,
+                            cantidad: cantidad,
+                            destino: destinoEntrega || 'No especificado',
+                            fecha: new Date().toISOString()
+                        };
+
+                        await addDoc(collection(window.firebaseDb, 'entregas'), entregaData);
+
+                        setMedicamentos(medicamentos.map(m => 
+                            m.id === med.id ? { ...m, cantidad: newCantidad } : m
+                        ));
+
+                        setEntregas([entregaData, ...entregas]);
+                        setFoundMedicamentos([]);
+                        setSubtractImage(null);
+                        setDestinoEntrega('');
+                        setActiveScreen('home');
+                        alert('✅ Medicamento dado de baja exitosamente');
+                    } catch (error) {
+                        console.error('Error actualizando medicamento:', error);
+                        alert('⚠️ Error al actualizar');
+                    }
+                } else {
+                    alert('⚠️ Cantidad inválida');
+                }
+            };
+
+            const handleManualSearch = () => {
+                if (manualSearch.trim()) {
+                    const matches = medicamentos.filter(m => 
+                        m.nombre.toLowerCase().includes(manualSearch.toLowerCase()) ||
+                        m.presentacion.toLowerCase().includes(manualSearch.toLowerCase())
+                    );
+                    setFoundMedicamentos(matches);
+                    if (matches.length === 0) {
+                        alert('❌ No se encontró ningún medicamento');
+                    }
+                }
+            };
+
+            const handleDeleteMed = async (medId) => {
+                if (window.confirm('¿Estás seguro de eliminar este medicamento?')) {
+                    try {
+                        const { doc, deleteDoc } = window.firebaseModules;
+                        await deleteDoc(doc(window.firebaseDb, 'medicamentos', medId));
+                        setMedicamentos(medicamentos.filter(m => m.id !== medId));
+                        alert('✅ Medicamento eliminado');
+                    } catch (error) {
+                        console.error('Error eliminando:', error);
+                        alert('⚠️ Error al eliminar');
+                    }
+                }
+            };
+
+            const filteredMeds = medicamentos.filter(m => 
+                m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                m.presentacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                m.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            // Modal de duplicados
+            if (showDuplicateModal && duplicateFound) {
+                const statusExistente = getExpiryStatus(duplicateFound.vencimiento);
+                const statusNuevo = getExpiryStatus(newMed.vencimiento);
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="flex items-center mb-6">
+                                <div className="w-12 h-12 text-orange-600 mr-4"><AlertCircle /></div>
+                                <h2 className="text-2xl font-bold text-orange-800">⚠️ Medicamento Similar Encontrado</h2>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+                                    <h3 className="font-bold text-blue-900 mb-3 flex items-center">
+                                        <div className="w-5 h-5 mr-2"><Package /></div>
+                                        Lote Existente en Inventario:
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <p><strong>Nombre:</strong> {duplicateFound.nombre}</p>
+                                        <p><strong>Presentación:</strong> {duplicateFound.presentacion}</p>
+                                        <p><strong>Categoría:</strong> {duplicateFound.categoria}</p>
+                                        <p><strong>Cantidad actual:</strong> <span className="text-2xl font-bold text-blue-600">{duplicateFound.cantidad}</span> unidades</p>
+                                        <p><strong>Vencimiento:</strong> {new Date(duplicateFound.vencimiento).toLocaleDateString()}</p>
+                                        <div className={'inline-block px-3 py-1 rounded-lg text-sm font-semibold ' + statusExistente.color}>
+                                            {statusExistente.text}
+                                        </div>
+                                    </div>
+                                    {duplicateFound.imagen && (
+                                        <img src={duplicateFound.imagen} alt="Existente" className="w-32 h-32 rounded-lg object-cover mt-3" />
+                                    )}
+                                </div>
+
+                                <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                                    <h3 className="font-bold text-green-900 mb-3 flex items-center">
+                                        <div className="w-5 h-5 mr-2"><Plus /></div>
+                                        Nuevo Registro a Agregar:
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <p><strong>Nombre:</strong> {newMed.nombre}</p>
+                                        <p><strong>Presentación:</strong> {newMed.presentacion}</p>
+                                        <p><strong>Categoría:</strong> {newMed.categoria}</p>
+                                        <p><strong>Cantidad nueva:</strong> <span className="text-2xl font-bold text-green-600">{newMed.cantidad}</span> unidades</p>
+                                        <p><strong>Vencimiento:</strong> {new Date(newMed.vencimiento).toLocaleDateString()}</p>
+                                        <div className={'inline-block px-3 py-1 rounded-lg text-sm font-semibold ' + statusNuevo.color}>
+                                            {statusNuevo.text}
+                                        </div>
+                                    </div>
+                                    {(processedImage || capturedImage) && (
+                                        <img src={processedImage || capturedImage} alt="Nuevo" className="w-32 h-32 rounded-lg object-cover mt-3" />
+                                    )}
+                                </div>
+
+                                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
+                                    <h3 className="font-bold text-yellow-900 mb-3">¿Qué deseas hacer?</h3>
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleCrearNuevoLote}
+                                            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center"
+                                        >
+                                            <div className="w-6 h-6 mr-2"><Plus /></div>
+                                            Crear Nuevo Lote (Mantener Separado)
+                                        </button>
+                                        <p className="text-xs text-gray-600 px-2">
+                                            ✅ Recomendado si tienen diferentes fechas de vencimiento. Permite control FIFO (dar primero el que vence antes).
+                                        </p>
+
+                                        <button
+                                            onClick={handleSumarAExistente}
+                                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center"
+                                        >
+                                            <div className="w-6 h-6 mr-2"><Package /></div>
+                                            Sumar a Lote Existente ({duplicateFound.cantidad} + {newMed.cantidad} = {duplicateFound.cantidad + parseInt(newMed.cantidad)})
+                                        </button>
+                                        <p className="text-xs text-gray-600 px-2">
+                                            ⚠️ Solo si tienen la misma fecha de vencimiento. Se perderá la trazabilidad del nuevo lote.
+                                        </p>
+
+                                        <button
+                                            onClick={() => {
+                                                setShowDuplicateModal(false);
+                                                setDuplicateFound(null);
+                                            }}
+                                            className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Modal de API Key
+            if (showApiKeyModal) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                            <div className="w-16 h-16 mx-auto mb-4 text-indigo-600"><Key /></div>
+                            <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">🔐 Configuración Inicial</h2>
+                            <p className="text-gray-600 text-center mb-6">Para usar el reconocimiento de medicamentos con IA, necesitas una API Key de Google Gemini.</p>
+
+                            <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+                                <p className="text-sm text-blue-800 mb-2"><strong>📝 Cómo obtener tu API Key:</strong></p>
+                                <ol className="text-xs text-blue-700 space-y-1 ml-4 list-decimal">
+                                    <li>Ve a: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">aistudio.google.com/app/apikey</a></li>
+                                    <li>Inicia sesión con tu cuenta de Google</li>
+                                    <li>Click en "Create API Key"</li>
+                                    <li>Copia la API Key</li>
+                                    <li>Pégala aquí abajo</li>
+                                </ol>
+                            </div>
+
+                            <input
+                                type="password"
+                                value={geminiApiKey}
+                                onChange={(e) => setGeminiApiKey(e.target.value)}
+                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none mb-4"
+                                placeholder="AIzaSy..."
+                            />
+
+                            <button
+                                onClick={saveApiKey}
+                                className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all"
+                            >
+                                💾 Guardar y Continuar
+                            </button>
+
+                            <p className="text-xs text-gray-500 text-center mt-4">
+                                🔒 Tu API Key se guarda solo en tu navegador. Es 100% privada y segura.
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (isLoading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto mb-4"><Loader /></div>
+                            <div className="text-xl font-bold text-indigo-900">Cargando aplicación...</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA HOME
+            if (activeScreen === 'home') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                                <h1 className="text-3xl font-bold text-indigo-900 mb-2">🏥 Farmacia de la Iglesia</h1>
+                                <p className="text-gray-600">Sistema de Gestión de Medicamentos</p>
+                                <div className="mt-2 flex items-center gap-4 flex-wrap">
+                                    <div className="text-xs text-green-600 flex items-center">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                                        Firebase conectado
+                                    </div>
+                                    <div className="text-xs text-blue-600 flex items-center">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                                        Google Gemini 2.0 Flash AI
+                                    </div>
+                                    <button
+                                        onClick={() => setShowApiKeyModal(true)}
+                                        className="text-xs text-gray-500 hover:text-gray-700 flex items-center"
+                                        title="Cambiar API Key"
+                                    >
+                                        <div className="w-4 h-4 mr-1"><Key /></div>
+                                        Configurar API
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <button
+                                    onClick={() => setActiveScreen('register')}
+                                    className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <div className="w-12 h-12 mx-auto mb-2"><Camera /></div>
+                                    <div className="text-lg font-bold">Registrar</div>
+                                    <div className="text-xs opacity-90 mt-1">Nuevo medicamento</div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveScreen('search')}
+                                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <div className="w-12 h-12 mx-auto mb-2"><Search /></div>
+                                    <div className="text-lg font-bold">Buscar</div>
+                                    <div className="text-xs opacity-90 mt-1">Consultar inventario</div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveScreen('subtract')}
+                                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <div className="w-12 h-12 mx-auto mb-2"><Minus /></div>
+                                    <div className="text-lg font-bold">Dar de Baja</div>
+                                    <div className="text-xs opacity-90 mt-1">Restar del inventario</div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveScreen('entregas')}
+                                    className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <div className="w-12 h-12 mx-auto mb-2"><ClipboardList /></div>
+                                    <div className="text-lg font-bold">Entregas</div>
+                                    <div className="text-xs opacity-90 mt-1">Historial</div>
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                    <div className="w-6 h-6 mr-2"><Package /></div> Resumen de Inventario
+                                </h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-blue-50 p-4 rounded-xl">
+                                        <div className="text-3xl font-bold text-blue-600">{medicamentos.length}</div>
+                                        <div className="text-sm text-gray-600">Total medicamentos</div>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-xl">
+                                        <div className="text-3xl font-bold text-green-600">
+                                            {medicamentos.filter(m => getDaysUntilExpiry(m.vencimiento) > 30).length}
+                                        </div>
+                                        <div className="text-sm text-gray-600">Vigentes</div>
+                                    </div>
+                                    <div className="bg-orange-50 p-4 rounded-xl">
+                                        <div className="text-3xl font-bold text-orange-600">{medicamentosPorVencer.length}</div>
+                                        <div className="text-sm text-gray-600">Por vencer</div>
+                                    </div>
+                                    <div className="bg-red-50 p-4 rounded-xl">
+                                        <div className="text-3xl font-bold text-red-600">{medicamentosVencidos.length}</div>
+                                        <div className="text-sm text-gray-600">Vencidos</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {medicamentosPorVencer.length > 0 && (
+                                <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                                    <button
+                                        onClick={() => setShowPorVencer(!showPorVencer)}
+                                        className="w-full flex justify-between items-center mb-4 hover:bg-orange-50 p-3 rounded-xl transition-all"
+                                    >
+                                        <div className="flex items-center">
+                                            <div className="w-6 h-6 text-orange-600 mr-3"><AlertCircle /></div>
+                                            <h3 className="text-lg font-bold text-orange-800">
+                                                ⚠️ Medicamentos Por Vencer (30 días o menos) - {medicamentosPorVencer.length}
+                                            </h3>
+                                        </div>
+                                        <div className="w-6 h-6 text-orange-600">
+                                            {showPorVencer ? <ChevronUp /> : <ChevronDown />}
+                                        </div>
+                                    </button>
+
+                                    {showPorVencer && (
+                                        <div className="space-y-3">
+                                            {medicamentosPorVencer.map(med => {
+                                                const status = getExpiryStatus(med.vencimiento);
+                                                return (
+                                                    <div key={med.id} className={'border-2 rounded-xl p-4 ' + status.color}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-1">
+                                                                <h4 className="text-lg font-bold">{med.nombre}</h4>
+                                                                <p className="text-sm opacity-80">{med.presentacion}</p>
+                                                                <p className="text-xs opacity-70 mt-1">📦 {med.categoria}</p>
+                                                            </div>
+                                                            {med.imagen && (
+                                                                <img src={med.imagen} alt={med.nombre} className="w-16 h-16 rounded-lg object-cover ml-4" />
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-3 flex justify-between items-center">
+                                                            <div>
+                                                                <span className="font-bold text-xl">{med.cantidad}</span>
+                                                                <span className="text-sm ml-2">unidades</span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="font-semibold">{status.text}</div>
+                                                                <div className="text-xs opacity-70">Vence: {new Date(med.vencimiento).toLocaleDateString()}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {medicamentosVencidos.length > 0 && (
+                                <div className="bg-white rounded-2xl shadow-xl p-6">
+                                    <button
+                                        onClick={() => setShowVencidos(!showVencidos)}
+                                        className="w-full flex justify-between items-center mb-4 hover:bg-red-50 p-3 rounded-xl transition-all"
+                                    >
+                                        <div className="flex items-center">
+                                            <div className="w-6 h-6 text-red-600 mr-3"><AlertCircle /></div>
+                                            <h3 className="text-lg font-bold text-red-800">
+                                                ❌ Medicamentos Vencidos - {medicamentosVencidos.length}
+                                            </h3>
+                                        </div>
+                                        <div className="w-6 h-6 text-red-600">
+                                            {showVencidos ? <ChevronUp /> : <ChevronDown />}
+                                        </div>
+                                    </button>
+
+                                    {showVencidos && (
+                                        <div className="space-y-3">
+                                            {medicamentosVencidos.map(med => {
+                                                const status = getExpiryStatus(med.vencimiento);
+                                                return (
+                                                    <div key={med.id} className={'border-2 rounded-xl p-4 ' + status.color}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-1">
+                                                                <h4 className="text-lg font-bold">{med.nombre}</h4>
+                                                                <p className="text-sm opacity-80">{med.presentacion}</p>
+                                                                <p className="text-xs opacity-70 mt-1">📦 {med.categoria}</p>
+                                                            </div>
+                                                            {med.imagen && (
+                                                                <img src={med.imagen} alt={med.nombre} className="w-16 h-16 rounded-lg object-cover ml-4" />
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-3 flex justify-between items-center">
+                                                            <div>
+                                                                <span className="font-bold text-xl">{med.cantidad}</span>
+                                                                <span className="text-sm ml-2">unidades</span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="font-semibold">{status.text}</div>
+                                                                <div className="text-xs opacity-70">Venció: {new Date(med.vencimiento).toLocaleDateString()}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-3">
+                                                            <button
+                                                                onClick={() => handleDeleteMed(med.id)}
+                                                                className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition-all flex items-center justify-center"
+                                                            >
+                                                                <div className="w-4 h-4 mr-2"><Trash /></div>
+                                                                Eliminar Medicamento Vencido
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA REGISTRO
+            if (activeScreen === 'register') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+                        <div className="max-w-2xl mx-auto">
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-green-800">📷 Registrar Nuevo Medicamento</h2>
+                                    <button onClick={() => setActiveScreen('home')} className="text-gray-500 hover:text-gray-700">
+                                        <div className="w-6 h-6"><X /></div>
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleImageCapture}
+                                        accept="image/*"
+                                        {...(isMobile() ? { capture: cameraMode } : {})}
+                                        className="hidden"
+                                    />
+                                    {!capturedImage ? (
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={() => fileInputRef.current.click()}
+                                                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-6 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
+                                            >
+                                                📸 {isMobile() ? 'Tomar Foto del Medicamento' : 'Seleccionar Imagen del Medicamento'}
+                                            </button>
+                                            {isMobile() && (
+                                                <button
+                                                    onClick={() => setCameraMode(cameraMode === 'environment' ? 'user' : 'environment')}
+                                                    className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all flex items-center justify-center"
+                                                >
+                                                    <div className="w-5 h-5 mr-2"><SwitchCamera /></div>
+                                                    Cambiar Cámara ({cameraMode === 'environment' ? 'Trasera' : 'Frontal'})
+                                                </button>
+                                            )}
+                                            <p className="text-sm text-gray-600 text-center">
+                                                La IA extraerá automáticamente la información del medicamento
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <img src={capturedImage} alt="Medicamento" className="w-full rounded-xl shadow-lg" />
+                                            {isProcessing && (
+                                                <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 text-center">
+                                                    <div className="w-8 h-8 mx-auto mb-2"><Loader /></div>
+                                                    <p className="text-blue-800 font-semibold">Analizando imagen con IA...</p>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setCapturedImage(null);
+                                                    setProcessedImage(null);
+                                                }}
+                                                className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                                            >
+                                                🔄 {isMobile() ? 'Tomar otra foto' : 'Seleccionar otra imagen'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del Medicamento *</label>
+                                        <input
+                                            type="text"
+                                            value={newMed.nombre}
+                                            onChange={(e) => setNewMed({...newMed, nombre: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+                                            placeholder="Ej: Paracetamol"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Presentación</label>
+                                        <input
+                                            type="text"
+                                            value={newMed.presentacion}
+                                            onChange={(e) => setNewMed({...newMed, presentacion: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+                                            placeholder="Ej: Tabletas 500mg"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Categoría</label>
+                                        <input
+                                            type="text"
+                                            value={newMed.categoria}
+                                            onChange={(e) => setNewMed({...newMed, categoria: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+                                            placeholder="Ej: Analgésico"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Cantidad *</label>
+                                        <input
+                                            type="number"
+                                            value={newMed.cantidad}
+                                            onChange={(e) => setNewMed({...newMed, cantidad: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+                                            placeholder="Ej: 50"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Vencimiento *</label>
+                                        <input
+                                            type="date"
+                                            value={newMed.vencimiento}
+                                            onChange={(e) => setNewMed({...newMed, vencimiento: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={handleSaveNewMed}
+                                        disabled={!newMed.nombre || !newMed.cantidad || !newMed.vencimiento}
+                                        className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        ✅ Guardar Medicamento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA BÚSQUEDA
+            if (activeScreen === 'search') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-100 p-4">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-blue-800">🔍 Buscar Medicamentos</h2>
+                                    <button onClick={() => setActiveScreen('home')} className="text-gray-500 hover:text-gray-700">
+                                        <div className="w-6 h-6"><X /></div>
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full px-4 py-4 pl-12 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-lg"
+                                            placeholder="Buscar por nombre, presentación o categoría..."
+                                        />
+                                        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400">
+                                            <Search />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {filteredMeds.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-500">
+                                            <div className="w-16 h-16 mx-auto mb-4 text-gray-300"><Search /></div>
+                                            <p className="text-lg font-semibold">No se encontraron medicamentos</p>
+                                        </div>
+                                    ) : (
+                                        filteredMeds.map(med => {
+                                            const status = getExpiryStatus(med.vencimiento);
+                                            return (
+                                                <div key={med.id} className={'border-2 rounded-xl p-4 ' + status.color}>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1">
+                                                            <h3 className="text-xl font-bold">{med.nombre}</h3>
+                                                            <p className="text-sm opacity-80">{med.presentacion}</p>
+                                                            <p className="text-xs opacity-70 mt-1">📦 {med.categoria}</p>
+                                                        </div>
+                                                        {med.imagen && (
+                                                            <img src={med.imagen} alt={med.nombre} className="w-20 h-20 rounded-lg object-cover ml-4" />
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-3 flex justify-between items-center">
+                                                        <div>
+                                                            <span className="font-bold text-2xl">{med.cantidad}</span>
+                                                            <span className="text-sm ml-2">unidades</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-semibold">{status.text}</div>
+                                                            <div className="text-xs opacity-70">Vence: {new Date(med.vencimiento).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-3 flex gap-2">
+                                                        <button
+                                                            onClick={() => handleDeleteMed(med.id)}
+                                                            className="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition-all flex items-center justify-center"
+                                                        >
+                                                            <div className="w-4 h-4 mr-2"><Trash /></div>
+                                                            Eliminar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA DAR DE BAJA
+            if (activeScreen === 'subtract') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100 p-4">
+                        <div className="max-w-2xl mx-auto">
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-orange-800">➖ Dar de Baja Medicamento</h2>
+                                    <button onClick={() => {
+                                        setActiveScreen('home');
+                                        setFoundMedicamentos([]);
+                                        setSubtractImage(null);
+                                    }} className="text-gray-500 hover:text-gray-700">
+                                        <div className="w-6 h-6"><X /></div>
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <input
+                                        type="file"
+                                        ref={subtractFileInputRef}
+                                        onChange={handleSubtractImageCapture}
+                                        accept="image/*"
+                                        {...(isMobile() ? { capture: subtractCameraMode } : {})}
+                                        className="hidden"
+                                    />
+                                    {!subtractImage ? (
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={() => subtractFileInputRef.current.click()}
+                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-6 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
+                                            >
+                                                📸 {isMobile() ? 'Tomar Foto del Medicamento' : 'Seleccionar Imagen del Medicamento'}
+                                            </button>
+                                            {isMobile() && (
+                                                <button
+                                                    onClick={() => setSubtractCameraMode(subtractCameraMode === 'environment' ? 'user' : 'environment')}
+                                                    className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all flex items-center justify-center"
+                                                >
+                                                    <div className="w-5 h-5 mr-2"><SwitchCamera /></div>
+                                                    Cambiar Cámara ({subtractCameraMode === 'environment' ? 'Trasera' : 'Frontal'})
+                                                </button>
+                                            )}
+
+                                            <div className="relative">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t border-gray-300"></div>
+                                                </div>
+                                                <div className="relative flex justify-center text-sm">
+                                                    <span className="px-2 bg-white text-gray-500">O buscar manualmente</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={manualSearch}
+                                                    onChange={(e) => setManualSearch(e.target.value)}
+                                                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none"
+                                                    placeholder="Nombre del medicamento..."
+                                                />
+                                                <button
+                                                    onClick={handleManualSearch}
+                                                    className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition-all"
+                                                >
+                                                    Buscar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <img src={subtractImage} alt="Medicamento" className="w-full rounded-xl shadow-lg" />
+                                            {isProcessing && (
+                                                <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 text-center">
+                                                    <div className="w-8 h-8 mx-auto mb-2"><Loader /></div>
+                                                    <p className="text-blue-800 font-semibold">Buscando medicamento...</p>
+                                                </div>
+                                            )}
+                                            {ocrResult.nombre && (
+                                                <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+                                                    <p className="text-sm text-blue-800 mb-2"><strong>🤖 IA detectó:</strong></p>
+                                                    <p className="text-sm text-blue-700">Nombre: {ocrResult.nombre}</p>
+                                                    <p className="text-sm text-blue-700">Presentación: {ocrResult.presentacion}</p>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setSubtractImage(null);
+                                                    setFoundMedicamentos([]);
+                                                    setOcrResult({ nombre: '', presentacion: '' });
+                                                }}
+                                                className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                                            >
+                                                🔄 {isMobile() ? 'Tomar otra foto' : 'Seleccionar otra imagen'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {foundMedicamentos.length > 0 && (
+                                    <div className="space-y-4">
+                                        <h3 className="font-bold text-lg text-gray-800">Medicamentos encontrados:</h3>
+                                        {foundMedicamentos.map(med => {
+                                            const status = getExpiryStatus(med.vencimiento);
+                                            return (
+                                                <div key={med.id} className={'border-2 rounded-xl p-4 ' + status.color}>
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div>
+                                                            <h4 className="text-xl font-bold">{med.nombre}</h4>
+                                                            <p className="text-sm opacity-80">{med.presentacion}</p>
+                                                            <p className="text-xs opacity-70 mt-1">📦 {med.categoria}</p>
+                                                        </div>
+                                                        {med.imagen && (
+                                                            <img src={med.imagen} alt={med.nombre} className="w-20 h-20 rounded-lg object-cover ml-4" />
+                                                        )}
+                                                    </div>
+                                                    <div className="mb-4">
+                                                        <div className="font-semibold">Disponible: {med.cantidad} unidades</div>
+                                                        <div className="text-sm opacity-70">Vence: {new Date(med.vencimiento).toLocaleDateString()}</div>
+                                                    </div>
+
+                                                    <div className="mb-4">
+                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Destino de la entrega:</label>
+                                                        <input
+                                                            type="text"
+                                                            value={destinoEntrega}
+                                                            onChange={(e) => setDestinoEntrega(e.target.value)}
+                                                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none"
+                                                            placeholder="Ej: Paciente Juan Pérez, Consultorio 3..."
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const cantidad = prompt('¿Cuántas unidades deseas dar de baja?');
+                                                                if (cantidad) {
+                                                                    handleSubtractStock(med, parseInt(cantidad));
+                                                                }
+                                                            }}
+                                                            className="flex-1 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition-all"
+                                                        >
+                                                            ➖ Dar de Baja
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA ENTREGAS
+            if (activeScreen === 'entregas') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-purple-800">📋 Historial de Entregas</h2>
+                                    <button onClick={() => setActiveScreen('home')} className="text-gray-500 hover:text-gray-700">
+                                        <div className="w-6 h-6"><X /></div>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {entregas.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-500">
+                                            <div className="w-16 h-16 mx-auto mb-4 text-gray-300"><ClipboardList /></div>
+                                            <p className="text-lg font-semibold">No hay entregas registradas</p>
+                                        </div>
+                                    ) : (
+                                        entregas.map((entrega, idx) => (
+                                            <div key={idx} className="border-2 border-purple-200 rounded-xl p-4 bg-purple-50">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-bold text-purple-900">{entrega.nombre}</h3>
+                                                        <p className="text-sm text-purple-700">{entrega.presentacion}</p>
+                                                        <p className="text-sm text-purple-600 mt-2">
+                                                            <strong>Destino:</strong> {entrega.destino}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-2xl font-bold text-purple-900">{entrega.cantidad}</div>
+                                                        <div className="text-xs text-purple-600">unidades</div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-3 text-xs text-purple-600">
+                                                    📅 {new Date(entrega.fecha).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return null;
+        };
+
+        ReactDOM.render(<FarmaciaApp />, document.getElementById('root'));
+    </script>
 </body>
 </html>
