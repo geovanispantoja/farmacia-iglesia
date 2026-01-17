@@ -235,7 +235,7 @@
 
                 setIsProcessing(true);
                 try {
-                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=' + geminiApiKey;
+                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:generateContent?key=' + geminiApiKey;
                     const response = await fetch(apiUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -277,7 +277,7 @@
 
                 setIsProcessing(true);
                 try {
-                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=' + geminiApiKey;
+                    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:generateContent?key=' + geminiApiKey;
                     const response = await fetch(apiUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -1274,5 +1274,6 @@
     </script>
 </body>
 </html>
+
 
 
